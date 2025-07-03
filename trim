@@ -7,12 +7,12 @@
 #       trim [height] [width]
 #
 #       By default, output is trimmed to 10 lines and the width of the terminal.
-#       Pass a negative number to disable trimming the height and or width. 
+#       Pass a negative number to disable trimming the height and/or width.
 #       Before trimming, tabs are expanded to spaces.
 #
 # EXAMPLES
 #       seq 100 | trim
-#       seq 100 | trim 20 
+#       seq 100 | trim 20
 #       seq 100 | trim 20 40
 #       seq 100 | trim -1 40
 #       seq 100 | trim 20 -1
@@ -23,12 +23,29 @@
 
 set -euf -o pipefail
 
+# Validate input arguments
+if ! [[ "${1:-10}" =~ ^-?[0-9]+$ ]]; then
+    echo "Error: HEIGHT must be an integer." >&2
+    exit 1
+fi
+
+if ! [[ "${2:-$(tput cols)}" =~ ^-?[0-9]+$ ]]; then
+    echo "Error: WIDTH must be an integer." >&2
+    exit 1
+fi
+
 HEIGHT="${1:-10}"
 WIDTH="${2:-$(tput cols)}"
 
+# Fallback for WIDTH if tput fails
+if ! [[ "${WIDTH}" =~ ^[0-9]+$ ]]; then
+    WIDTH=80
+fi
+
 expand |
-awk -v height="${HEIGHT}" -v width="${WIDTH}" \
-'function tprint() {
+awk -v height="${HEIGHT}" -v width="${WIDTH}" '
+# Print a line, trimming to the specified width
+function tprint() {
     if (width > 0 && length($0) > width) {
         print substr($0, 1, width - 1) "…"
     } else {
@@ -36,10 +53,12 @@ awk -v height="${HEIGHT}" -v width="${WIDTH}" \
     }
 }
 
+# Main processing block
 height <= 0 || NR <= height {
     tprint()
 }
 
+# End block for handling overflow
 END {
     if (height > 0) {
         if (NR == height + 1) {
