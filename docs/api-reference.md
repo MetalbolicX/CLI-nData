@@ -64,7 +64,15 @@ echo -e "1,10\n2,20\n3,15\n4,25\n5,30" | dumbplot
 
 ## `scrape`
 
-This command is used to scrape data from a webpage using **CSS selectors** or **XPath**. It allows you to extract specific sections from HTML document.
+This command is used to scrape data from a webpage using **CSS selectors** or **XPath**. It allows you to extract specific sections from HTML document. This script requires **Python 3** and it is powered by `cssselect` and `lxml` libraries. Automatically starts a virtual environment if not already activated and at the end deactivates it.
+
+### Usage
+
+```sh
+scrape <html_text> [options]
+```
+
+### Options
 
 
 
