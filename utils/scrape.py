@@ -51,8 +51,7 @@ def main() -> int:
 
     xpath_expressions: List[str] = [selector if selector.startswith('//') else GenericTranslator().css_to_xpath(selector) for selector in args.selectors]
 
-    html_parser = etree.HTMLParser(encoding='utf-8', recover=True,
-                                   strip_cdata=True)
+    html_parser = etree.HTMLParser(encoding='utf-8', recover=True)
 
     input_source = open(args.input_file) if args.input_file else args.html
     if args.raw_input:
