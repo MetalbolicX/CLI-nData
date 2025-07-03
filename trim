@@ -18,6 +18,7 @@
 #       seq 100 | trim 20 -1
 #
 # Author: Jeroen Janssens (https://jeroenjanssens.com)
+# Modified by: José Martínez Santana
 #
 # LICENSE: MIT (2021)
 
