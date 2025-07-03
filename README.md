@@ -1,27 +1,46 @@
 # CLI-nData
 
-> CLI-nData is the short name of **Clean data**. It is command line tools to process data from the Linux terminal. If you are a data scientists or data engineer, you can use it to process data in the terminal.
+> CLI-nData is the short name of Clean data. It is command line tools to process data from the Linux terminal. If you are a data scientists or data engineer, you can use it to process data in the terminal.
+
+**Supported Versions:**
+
+![Python version](https://img.shields.io/badge/Python-%3E%3D3.8.0-blue)
 
 ## 🚀 Quick Installation
 
-1. Check if Pyhon is installed on your system.
+Check the [Getting Started](https://metalbolicx.github.io/cli-ndata/#/getting-started) guide for detailed instructions on how to install and use CLI-nData.
 
-```sh
-python3 --version
-```
+## 📚 Documentation
 
-If not, install it from [python.org](https://www.python.org/downloads/).
+<div align="center">
 
-2. Dowload the CLI-nData from GitHub.
+[![view - Documentation](https://img.shields.io/badge/view-Documentation-blue?style=for-the-badge)](https://metalbolicx.github.io/cli-ndata/#/api-reference)
 
-```sh
-git clone https://github.com/MetalbolicX/CLI-nData
-```
+</div>
 
-3. In your home directory the next environment variable will be added to your `.bashrc` or `.zshrc` file by executing the next command:
+## Contributing
 
-```sh
-export PATH="$HOME/cli-ndata:$PATH"
-```
+Contributions are welcome! Please feel free to submit a Pull Request.
 
-This will allow you to run the CLI-nData commands from anywhere in your terminal similar to the `cd` or `cat` commands.
+## Technologies Used
+
+<table style="border: none;">
+  <tr>
+    <td align="center">
+      <a href="https://www.gnu.org/software/bash/" target="_blank">
+        <img src="https://bashlogo.com/img/logo/svg/full_colored_dark.svg" alt="Bash" width="42" height="42" /><br/>
+        <b>Bash</b><br/>
+      </a>
+    </td>
+    <td align="center">
+      <a href="https://www.python.org/psf-landing/" target="_blank">
+        <img src="https://s3.dualstack.us-east-2.amazonaws.com/pythondotorg-assets/media/files/python-logo-only.svg" alt="ReScript" width="42" height="42" /><br/>
+        <b>Python</b><br/>
+      </a>
+    </td>
+  </tr>
+</table>
+
+## Licence
+
+Release under the [MIT License](/LICENSE) by [@MetalbolicX](https://github.com/MetalbolicX).
