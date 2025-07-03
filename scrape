@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Define the virtual environment directory
 VENV_DIR="$HOME/bin/utils/venv"
