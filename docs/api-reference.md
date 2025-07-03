@@ -74,6 +74,63 @@ scrape <html_text> [options]
 
 ### Options
 
+- `-a, --attribute`: Extract a specific attribute from the HTML tag (e.g., `href`, `src`).
+- `-b, --include_body_tags`: Enclose the output with `<html>` and `<body>` tags.
+- `-e, --selectors`: Specify XPath queries or CSS3 selectors to extract elements. Can be used multiple times.
+- `-f, --input_file`: Specify a file to read the HTML input from instead of `stdin`.
+- `-x, --check_existence`: Exit with code `0` if elements exist, otherwise exit with code `1`.
+- `-r, --raw_input`: Do not parse the HTML before feeding it to `etree`. Useful for escaping CData.
+
+### Examples
+
+#### Extract Links from a Webpage
+Extract all links (`<a>` tags) from a webpage:
+```sh
+curl 'https://en.wikipedia.org/wiki/List_of_sovereign_states' -s | scrape -e 'a' -a 'href'
+```
+
+#### Extract Table Data Using CSS Selectors
+Extract bold text inside table cells from a Wikipedia page:
+```sh
+curl 'https://en.wikipedia.org/wiki/List_of_sovereign_states' -s | scrape -e 'table.wikitable > tbody > tr > td > b > a'
+```
+
+#### Extract Specific Attributes
+Extract the `src` attribute of all `<img>` tags:
+```sh
+curl 'https://example.com' -s | scrape -e 'img' -a 'src'
+```
+
+#### Check Existence of Elements
+Check if a specific element exists on a webpage:
+```sh
+curl 'https://example.com' -s | scrape -e 'div#main-content' -x
+```
+
+#### Process Raw HTML Input
+Process raw HTML without parsing:
+```sh
+cat raw_html_file.html | scrape -r -e '//div[@class="content"]'
+```
+
+#### Include HTML and BODY Tags in Output
+Wrap the output with `<html>` and `<body>` tags:
+```sh
+curl 'https://example.com' -s | scrape -e 'p' -b
+```
+
+#### Read HTML from a File
+Read HTML input from a file instead of `stdin`:
+```sh
+scrape -f input.html -e 'h1'
+```
+
+?>
+**CSS Selectors**: If a selector is provided, it is automatically converted to XPath using `cssselect`.
+**XPath Queries**: XPath expressions can be used directly by prefixing them with `//`.
+
+### Usage
+
 
 
 ## `trim`

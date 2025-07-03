@@ -26,7 +26,7 @@ if [ "$REQUIREMENTS_PATH" -nt "$INSTALL_MARKER" ]; then
 fi
 
 # --- Execute the scrape script ---
-python "$SCRIPT_PATH" "$@"
+python3 "$SCRIPT_PATH" "$@"
 
 # --- Deactivate the virtual environment ---
 deactivate
