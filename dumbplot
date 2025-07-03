@@ -91,6 +91,6 @@ if [ -n "$ASIS" ]; then
         nl -s, -f nl | gnuplot -e "set term dumb size $PWIDTH,$PHEIGHT" -e 'set datafile separator ","; set nokey; plot "-" using 1:3:xtic(2) with lines'
     fi
 else
-    # Scatterplot or line chart of data
-    gnuplot -e "set term dumb size $PWIDTH,$PHEIGHT" -e 'set datafile separator ","; set nokey; plot "-" using 1:2 with lines'
+    # Time series or numerical scatterplot with lines
+    gnuplot -e "set term dumb size $PWIDTH,$PHEIGHT" -e 'set datafile separator ","; set nokey; plot "-" using 2:xticlabels(1) with lines'
 fi
