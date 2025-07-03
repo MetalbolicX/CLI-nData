@@ -1,0 +1,96 @@
+#!/bin/bash
+# dumbplot: Output plot on the terminal given list of X,Y coordinates.
+#   Can either be a scatter plot or a bar (or bar-like) plot that
+#   assumes that the y-coordinate is numeric and just displays the
+#   x-coordinate data as-is, and in the order that it is fed to the
+#   scripts.
+#
+# Dependency: gnuplot
+#
+# Author: http://jeroenjanssens.com
+
+usage () {
+cat << EOF
+dumbplot: Use gnuplot to quickly get ASCII plot of x-y data.
+
+Usage:
+  dumbplot [OPTIONS]
+
+Options:
+  -a      Treat x-coordinates as categorical data for plotting.
+  -b      Use vertical boxes for bar-like plots (implies -a).
+  -w      Specify terminal width (default: terminal width).
+  -v      Specify terminal height (default: terminal height / 2).
+  -h      Display this help message.
+
+Examples:
+  $ paste -d, <(echo 1 2 4 8 9 | tr ' ' '\n') <(echo 1 2 4 2 1 | tr ' ' '\n') | dumbplot
+  $ paste -d, <(echo a b c d e | tr ' ' '\n') <(echo 1 2 4 10 6 | tr ' ' '\n') | dumbplot -a
+  $ paste -d, <(echo a b c d e | tr ' ' '\n') <(echo 1 2 4 10 6 | tr ' ' '\n') | dumbplot -b
+  $ paste -d, <(echo a b c d e | tr ' ' '\n') <(echo 1 2 4 10 6 | tr ' ' '\n') | dumbplot -b -w 80 -v 22
+
+EOF
+}
+
+# Check if gnuplot is installed
+if ! command -v gnuplot &> /dev/null; then
+    echo "Error: gnuplot is not installed. Please install it to use this script."
+    exit 1
+fi
+
+ASIS=
+BARCHART=
+PWIDTH=$(tput cols)
+PHEIGHT=$(tput lines)
+
+# Default height is half the terminal height
+PHEIGHT=$(echo "$PHEIGHT / 2" | bc)
+
+while getopts "abw:v:h" OPTION; do
+    case $OPTION in
+        a)
+            ASIS=1
+            ;;
+        b)
+            ASIS=1
+            BARCHART=1
+            ;;
+        w)
+            if ! [[ "$OPTARG" =~ ^[0-9]+$ ]]; then
+                echo "Error: Width must be a numeric value."
+                exit 2
+            fi
+            PWIDTH=$OPTARG
+            ;;
+        v)
+            if ! [[ "$OPTARG" =~ ^[0-9]+$ ]]; then
+                echo "Error: Height must be a numeric value."
+                exit 2
+            fi
+            PHEIGHT=$OPTARG
+            ;;
+        h)
+            usage
+            exit 0
+            ;;
+        *)
+            echo "Error: Invalid option."
+            usage
+            exit 1
+            ;;
+    esac
+done
+
+## Decision logic to execute the correct gnuplot command
+if [ -n "$ASIS" ]; then
+    if [ -n "$BARCHART" ]; then
+        # Categorical data, uses boxes in plot
+        nl -s, -f nl | gnuplot -e "set term dumb size $PWIDTH,$PHEIGHT" -e 'set datafile separator ","; set nokey; plot "-" using 1:3:xtic(2) with boxes'
+    else
+        # Categorical data, do NOT use boxes
+        nl -s, -f nl | gnuplot -e "set term dumb size $PWIDTH,$PHEIGHT" -e 'set datafile separator ","; set nokey; plot "-" using 1:3:xtic(2)'
+    fi
+else
+    # Scatterplot of data
+    gnuplot -e "set term dumb size $PWIDTH,$PHEIGHT" -e 'set datafile separator ","; set nokey; plot "-"'
+fi
