@@ -98,7 +98,7 @@ curl 'https://en.wikipedia.org/wiki/List_of_sovereign_states' -s | scrape -e 'ta
 #### Extract Specific Attributes
 Extract the `src` attribute of all `<img>` tags:
 ```sh
-curl 'https://example.com' -s | scrape -e 'img' -a 'src'
+curl 'https://example.com' -s | scrape -e 'a' -a 'href'
 ```
 
 #### Check Existence of Elements
