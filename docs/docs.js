@@ -2,7 +2,7 @@ window.$docsify = {
   name: "cli-ndata",
   repo: "https://github.com/MetalbolicX/cli-ndata.git",
   loadSidebar: true,
-  subMaxLevel: 3,
+  subMaxLevel: 2,
   coverpage: true,
   tabs: {
     persist: true,
