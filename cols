@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+# cols: apply a command to a subset of the columns and merge back with the remaining columns.
+#
+# Assumes that the input data is comma-delimited and that it has a header.
+# Depends on csvcut, which is part of csvkit: http://csvkit.readthedocs.org
+#
+# Example usage 1: reverse sort column 'a'
+# $ echo 'a,b\n1,2\n3,4\n5,6' | cols -c a body sort -nr
+#
+# Example usage 2: apply PCA (using tapkee) to all numerical features (-C selects all but the specified columns) of the Iris data set:
+# $ < iris.csv cols -C species body tapkee --method pca | header -r x,y,species
+#
+# See also: header and body (https://github.com/jeroenjanssens/command-line-tools-for-data-science)
+#
+# Author: http://jeroenjanssens.com
+
+# Validate input arguments
+if [[ $# -lt 3 ]]; then
+    echo "Error: Missing arguments. Usage: cols <arg> <columns> <command>" >&2
+    exit 1
+fi
+
+ARG="$1"
+ARG_INV="$(tr cC Cc <<< "${ARG}")"
+shift
+COLUMNS="$1"
+shift
+EXPR="$@"
+
+# Check for required dependencies
+if ! command -v csvcut &> /dev/null; then
+    echo "Error: csvcut is not installed. Please install csvkit." >&2
+    exit 1
+fi
+
+if ! command -v paste &> /dev/null; then
+    echo "Error: paste is not installed." >&2
+    exit 1
+fi
+
+# Handle temporary file creation
+if [ -z "$TMPDIR" ]; then
+    TMPDIR=/tmp
+fi
+
+OTHER_COLUMNS=$(mktemp "${TMPDIR}/cols-XXXXXXXX") || {
+    echo "Error: Failed to create temporary file." >&2
+    exit 1
+}
+
+# Cleanup temporary file on exit
+finish() {
+    rm -f "$OTHER_COLUMNS"
+}
+trap finish EXIT
+
+# Process columns and execute the command
+tee "$OTHER_COLUMNS" | csvcut "$ARG" "$COLUMNS" | eval "${EXPR}" | paste -d, - <(csvcut "$ARG_INV" "$COLUMNS" "$OTHER_COLUMNS")
