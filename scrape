@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 
 # Define the virtual environment directory
-VENV_DIR="$HOME/bin/utils/venv"
-SCRIPT_PATH="$HOME/bin/utils/scrape.py"
-REQUIREMENTS_PATH="$HOME/bin/utils/requirements.txt"
+VENV_DIR="$HOME/cli-ndata/utils/venv"
+SCRIPT_PATH="$HOME/cli-ndata/utils/scrape.py"
+REQUIREMENTS_PATH="$HOME/cli-ndata/utils/requirements.txt"
 
 # --- Automatic Virtual Environment Management ---
 
