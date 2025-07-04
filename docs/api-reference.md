@@ -223,6 +223,49 @@ scrape -f input.html -e 'h1'
 **CSS Selectors**: If a selector is provided, it is automatically converted to XPath using `cssselect`.
 **XPath Queries**: XPath expressions can be used directly by prefixing them with `//`.
 
+## `servedir`
+
+This command is used to serve a static website from a specified working directory. It uses Python's built-in HTTP server capabilities to serve files over HTTP.
+
+### Usage
+
+```sh
+servedir [PORT] [DIR]
+```
+
+### Arguments
+
+- `PORT`: The port number to serve the website on. Default is `8000`. If not specified, it will use the default port.
+- `DIR`: The directory to serve files from. Default is the current working directory. If not specified, it will use the current directory.
+
+### Examples
+
+#### Serve Current Directory on Default Port
+
+```sh
+servedir
+```
+
+Output: Serves the current directory on port `8000`.
+
+#### Serve in another Port
+
+```sh
+servedir 8080
+```
+
+Output: Serves the current directory on port `8080`.
+
+#### Serve a Specific Directory
+
+```sh
+servedir 8080 /path/to/directory
+```
+
+Output: Serves the specified directory on port `8080`.
+
+?> When another directory is specifies. The port needs to be specified as well, otherwise, it will cause an error.
+
 ## `trim`
 
 This command trims the output to a specified height (number of lines) and width (number of characters per line). It is useful for limiting the size of terminal output, especially when working with large datasets or long lines of text. Tabs are expanded to spaces before trimming.
@@ -252,6 +295,7 @@ trim [height] [width]
 ```sh
 seq 100 | trim
 ```
+
 Output: Displays the first 10 lines, trimmed to the terminal width.
 
 #### Trim Output to a Specific Height
@@ -286,8 +330,3 @@ seq 100 | trim 20 -1
 ```
 
 Output: Displays the first 20 lines, without trimming the width.
-
-?>
-**Height and Width Validation**: The script ensures that both `height` and `width` are integers. If invalid values are provided, an error message is displayed.
-**Fallback for Width**: If the terminal width cannot be determined, the script defaults to `80` characters.
-**Overflow Handling**: If the output exceeds the specified height, the script appends a summary indicating the number of additional lines.
