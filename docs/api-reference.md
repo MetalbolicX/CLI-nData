@@ -223,14 +223,14 @@ scrape -f input.html -e 'h1'
 **CSS Selectors**: If a selector is provided, it is automatically converted to XPath using `cssselect`.
 **XPath Queries**: XPath expressions can be used directly by prefixing them with `//`.
 
-## `servedir`
+## `httpservedir`
 
 This command is used to serve a static website from a specified working directory. It uses Python's built-in HTTP server capabilities to serve files over HTTP.
 
 ### Usage
 
 ```sh
-servedir [PORT] [DIR]
+httpservedir [PORT] [DIR]
 ```
 
 ### Arguments
@@ -243,7 +243,7 @@ servedir [PORT] [DIR]
 #### Serve Current Directory on Default Port
 
 ```sh
-servedir
+httpservedir
 ```
 
 Output: Serves the current directory on port `8000`.
@@ -251,7 +251,7 @@ Output: Serves the current directory on port `8000`.
 #### Serve in another Port
 
 ```sh
-servedir 8080
+httpservedir 8080
 ```
 
 Output: Serves the current directory on port `8080`.
@@ -259,7 +259,7 @@ Output: Serves the current directory on port `8080`.
 #### Serve a Specific Directory
 
 ```sh
-servedir 8080 /path/to/directory
+httpservedir 8080 /path/to/directory
 ```
 
 Output: Serves the specified directory on port `8080`.
