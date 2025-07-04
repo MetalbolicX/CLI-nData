@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+# unpack: Extract common file formats
+
+# Dependencies: unrar, unzip, p7zip-full
+
+# Author: Patrick Brisbin
+# From: http://linuxtidbits.wordpress.com/2009/08/04/week-of-bash-scripts-extract/
+# Modified by: José Martínez Santana
+
+# Display usage if no parameters are given or if the help flag is used
+if [[ -z "$1" || "$1" == "-h" ]]; then
+    echo "Usage: ${0##*/} <archive> [archive2 ...] - extract common file formats"
+    echo "Supported formats: .7z, .tar.bz2, .bz2, .deb, .tar.gz, .gz, .tar, .tbz2, .tar.xz, .tgz, .rar, .zip, .Z"
+    exit 0
+fi
+
+# Required programs
+req_progs=(7z unrar unzip)
+missing_progs=()
+for p in "${req_progs[@]}"; do
+    if ! command -v "$p" &> /dev/null; then
+        missing_progs+=("$p")
+    fi
+done
+
+if [ "${#missing_progs[@]}" -gt 0 ]; then
+    echo "Warning: The following programs are not installed: ${missing_progs[*]}"
+    echo "Some formats may not be supported."
+fi
+
+# Process each file passed as an argument
+for FILE in "$@"; do
+    # Test if file exists
+    if [ ! -f "$FILE" ]; then
+        echo "Error: File '$FILE' does not exist."
+        continue
+    fi
+
+    # Extract file by using extension as reference
+    echo "Extracting '$FILE'..."
+    case "$FILE" in
+        *.7z ) 7z x "$FILE" ;;
+        *.tar.bz2 ) tar xvjf "$FILE" ;;
+        *.bz2 ) bunzip2 "$FILE" ;;
+        *.deb ) ar vx "$FILE" ;;
+        *.tar.gz ) tar xvf "$FILE" ;;
+        *.gz ) gunzip "$FILE" ;;
+        *.tar ) tar xvf "$FILE" ;;
+        *.tbz2 ) tar xvjf "$FILE" ;;
+        *.tar.xz ) tar xvf "$FILE" ;;
+        *.tgz ) tar xvzf "$FILE" ;;
+        *.rar ) unrar x "$FILE" ;;
+        *.zip ) unzip "$FILE" ;;
+        *.Z ) uncompress "$FILE" ;;
+        * ) echo "Unsupported file format: '$FILE'" ;;
+    esac
+    echo "Done extracting '$FILE'."
+done
