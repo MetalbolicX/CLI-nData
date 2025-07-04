@@ -8,6 +8,86 @@ This page documents the core scripts of the cli-ndata package.
 
 ## `dseq`
 
+This command generates a sequence of dates relative to a start day. It allows you to specify the starting date, increment, and format for the output dates. The script is powered by the `date` command and supports flexible date formatting and offsets.
+
+### Usage
+
+```sh
+dseq [OPTIONS] LAST
+dseq [OPTIONS] FIRST LAST
+dseq [OPTIONS] FIRST INCREMENT LAST
+```
+
+### Arguments
+
+- `LAST`: Generates dates from `FIRST` (default `0` for today) up to `LAST`. If only `LAST` is given, it implies `FIRST=1` and `INCREMENT=1`.
+- `FIRST`: The starting offset in days from the base date.
+- `INCREMENT`: The step size in days for the sequence.
+
+### Options
+
+- `-f, --format <format_string>`: Specify the output date format (e.g., `%Y-%m-%d`, `%A, %B %d, %Y`). Uses `date` command format codes. Default: `+%F` (YYYY-MM-DD).
+- `-s, --start-date <date_string>`: Specify the base date to start from (e.g., `2023-01-01`, `tomorrow`, `yesterday`). Default: today. This affects the `0 day` offset.
+- `-h, --help`: Display this help message and exit.
+
+### Examples
+
+#### Generate Tomorrow's Date
+
+```sh
+dseq 1
+```
+Output: Tomorrow's date (default: start=today, first=1, inc=1, last=1).
+
+#### Generate Today's Date
+
+```sh
+dseq 0 0
+```
+Output: Today's date (start=today, first=0, last=0).
+
+#### Generate Next 7 Days
+
+```sh
+dseq 7
+```
+Output: Dates for the next 7 days (start=today, first=1, inc=1, last=7).
+
+#### Generate a Range of Dates
+
+```sh
+dseq -2 0
+```
+Output: Dates from the day before yesterday to today (start=today, first=-2, inc=1, last=0).
+
+#### Generate Weekly Dates for a Year
+
+```sh
+dseq 1 7 365
+```
+Output: Dates starting tomorrow and then every week for a year (start=today, first=1, inc=7, last=365).
+
+#### Custom Date Format
+
+```sh
+dseq -f "%Y/%m/%d %a" 0 2
+```
+Output: Today, tomorrow, and the day after tomorrow in `YYYY/MM/DD Day` format.
+
+#### Start from a Specific Date
+
+```sh
+dseq -s "2024-12-25" 0 2
+```
+Output: Dates starting from December 25, 2024.
+
+#### Generate Dates Relative to a Specific Day
+
+```sh
+dseq -s "last friday" -1 0
+```
+Output: Dates for last Friday and Saturday.
+
 ## `dumbplot`
 
 This command is used to plot data in ASCII characters by using `gnuplot` dependency. It can handle categorical, numerical and time series data.
@@ -15,7 +95,7 @@ This command is used to plot data in ASCII characters by using `gnuplot` depende
 ### Usage
 
 ```sh
-dumbplot [options]
+dumbplot [OPTIONS]
 ```
 
 ### Options
@@ -84,43 +164,57 @@ scrape <html_text> [options]
 ### Examples
 
 #### Extract Links from a Webpage
+
 Extract all links (`<a>` tags) from a webpage:
+
 ```sh
 curl 'https://en.wikipedia.org/wiki/List_of_sovereign_states' -s | scrape -e 'a' -a 'href'
 ```
 
 #### Extract Table Data Using CSS Selectors
+
 Extract bold text inside table cells from a Wikipedia page:
+
 ```sh
 curl 'https://en.wikipedia.org/wiki/List_of_sovereign_states' -s | scrape -e 'table.wikitable > tbody > tr > td > b > a'
 ```
 
 #### Extract Specific Attributes
+
 Extract the `src` attribute of all `<img>` tags:
+
 ```sh
 curl 'https://example.com' -s | scrape -e 'a' -a 'href'
 ```
 
 #### Check Existence of Elements
+
 Check if a specific element exists on a webpage:
+
 ```sh
 curl 'https://example.com' -s | scrape -e 'div#main-content' -x
 ```
 
 #### Process Raw HTML Input
+
 Process raw HTML without parsing:
+
 ```sh
 cat raw_html_file.html | scrape -r -e '//div[@class="content"]'
 ```
 
 #### Include HTML and BODY Tags in Output
+
 Wrap the output with `<html>` and `<body>` tags:
+
 ```sh
 curl 'https://example.com' -s | scrape -e 'p' -b
 ```
 
 #### Read HTML from a File
+
 Read HTML input from a file instead of `stdin`:
+
 ```sh
 scrape -f input.html -e 'h1'
 ```
@@ -129,8 +223,71 @@ scrape -f input.html -e 'h1'
 **CSS Selectors**: If a selector is provided, it is automatically converted to XPath using `cssselect`.
 **XPath Queries**: XPath expressions can be used directly by prefixing them with `//`.
 
+## `trim`
+
+This command trims the output to a specified height (number of lines) and width (number of characters per line). It is useful for limiting the size of terminal output, especially when working with large datasets or long lines of text. Tabs are expanded to spaces before trimming.
+
 ### Usage
 
+```sh
+trim [height] [width]
+```
+
+### Arguments
+
+- `height`: The maximum number of lines to display. Default: `10`. Pass a negative number to disable height trimming.
+- `width`: The maximum number of characters per line. Default: terminal width. Pass a negative number to disable width trimming.
+
+### Features
+
+- **Height Trimming**: Limits the number of lines displayed. If the output exceeds the specified height, a summary of the remaining lines is shown.
+- **Width Trimming**: Limits the number of characters per line. Lines longer than the specified width are truncated and appended with `…`.
+- **Tabs Expansion**: Tabs are converted to spaces before trimming.
+- **Fallback Width**: If terminal width cannot be determined, defaults to `80` characters.
+
+### Examples
+
+#### Trim Output to Default Height and Width
+
+```sh
+seq 100 | trim
+```
+Output: Displays the first 10 lines, trimmed to the terminal width.
+
+#### Trim Output to a Specific Height
+
+```sh
+seq 100 | trim 20
+```
+
+Output: Displays the first 20 lines, trimmed to the terminal width.
+
+#### Trim Output to a Specific Height and Width
+
+```sh
+seq 100 | trim 20 40
+```
+
+Output: Displays the first 20 lines, with each line trimmed to 40 characters.
+
+#### Disable Height Trimming
+
+```sh
+seq 100 | trim -1 40
+```
+
+Output: Displays all lines, with each line trimmed to 40 characters.
 
 
-## `trim`
+#### Disable Width Trimming
+
+```sh
+seq 100 | trim 20 -1
+```
+
+Output: Displays the first 20 lines, without trimming the width.
+
+?>
+**Height and Width Validation**: The script ensures that both `height` and `width` are integers. If invalid values are provided, an error message is displayed.
+**Fallback for Width**: If the terminal width cannot be determined, the script defaults to `80` characters.
+**Overflow Handling**: If the output exceeds the specified height, the script appends a summary indicating the number of additional lines.
