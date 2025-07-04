@@ -7,11 +7,34 @@
 # From: http://linuxtidbits.wordpress.com/2009/08/04/week-of-bash-scripts-extract/
 # Modified by: José Martínez Santana
 
-# Display usage if no parameters are given or if the help flag is used
-if [[ -z "$1" || "$1" == "-h" ]]; then
-    echo "Usage: ${0##*/} <archive> [archive2 ...] - extract common file formats"
-    echo "Supported formats: .7z, .tar.bz2, .bz2, .deb, .tar.gz, .gz, .tar, .tbz2, .tar.xz, .tgz, .rar, .zip, .Z"
-    exit 0
+# Default target directory
+TARGET_DIR=$(pwd)
+
+# Parse flags
+while getopts "hd:" OPTION; do
+    case $OPTION in
+        h)
+            echo "Usage: ${0##*/} [-d TARGET_DIR] <archive> [archive2 ...] - extract common file formats"
+            echo "Supported formats: .7z, .tar.bz2, .bz2, .deb, .tar.gz, .gz, .tar, .tbz2, .tar.xz, .tgz, .rar, .zip, .Z"
+            exit 0
+            ;;
+        d)
+            TARGET_DIR="$OPTARG"
+            ;;
+        *)
+            echo "Error: Invalid option"
+            exit 1
+            ;;
+    esac
+done
+
+# Shift parsed options to process file arguments
+shift $((OPTIND - 1))
+
+# Validate target directory
+if [ ! -d "$TARGET_DIR" ]; then
+    echo "Error: Target directory '$TARGET_DIR' does not exist."
+    exit 1
 fi
 
 # Required programs
@@ -37,21 +60,21 @@ for FILE in "$@"; do
     fi
 
     # Extract file by using extension as reference
-    echo "Extracting '$FILE'..."
+    echo "Extracting '$FILE' to '$TARGET_DIR'..."
     case "$FILE" in
-        *.7z ) 7z x "$FILE" ;;
-        *.tar.bz2 ) tar xvjf "$FILE" ;;
-        *.bz2 ) bunzip2 "$FILE" ;;
-        *.deb ) ar vx "$FILE" ;;
-        *.tar.gz ) tar xvf "$FILE" ;;
-        *.gz ) gunzip "$FILE" ;;
-        *.tar ) tar xvf "$FILE" ;;
-        *.tbz2 ) tar xvjf "$FILE" ;;
-        *.tar.xz ) tar xvf "$FILE" ;;
-        *.tgz ) tar xvzf "$FILE" ;;
-        *.rar ) unrar x "$FILE" ;;
-        *.zip ) unzip "$FILE" ;;
-        *.Z ) uncompress "$FILE" ;;
+        *.7z ) 7z x "$FILE" -o"$TARGET_DIR" ;;
+        *.tar.bz2 ) tar xvjf "$FILE" -C "$TARGET_DIR" ;;
+        *.bz2 ) bunzip2 -c "$FILE" > "$TARGET_DIR/${FILE%.bz2}" ;;
+        *.deb ) ar vx "$FILE" -C "$TARGET_DIR" ;;
+        *.tar.gz ) tar xvf "$FILE" -C "$TARGET_DIR" ;;
+        *.gz ) gunzip -c "$FILE" > "$TARGET_DIR/${FILE%.gz}" ;;
+        *.tar ) tar xvf "$FILE" -C "$TARGET_DIR" ;;
+        *.tbz2 ) tar xvjf "$FILE" -C "$TARGET_DIR" ;;
+        *.tar.xz ) tar xvf "$FILE" -C "$TARGET_DIR" ;;
+        *.tgz ) tar xvzf "$FILE" -C "$TARGET_DIR" ;;
+        *.rar ) unrar x "$FILE" "$TARGET_DIR" ;;
+        *.zip ) unzip "$FILE" -d "$TARGET_DIR" ;;
+        *.Z ) uncompress -c "$FILE" > "$TARGET_DIR/${FILE%.Z}" ;;
         * ) echo "Unsupported file format: '$FILE'" ;;
     esac
     echo "Done extracting '$FILE'."
