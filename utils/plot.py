@@ -4,7 +4,7 @@
 This script generates various types of plots (line, scatter, bar, time series) using termplotlib.
 
 Example usage:
-$ python plot.py --type line --data '[{"hours": 0, "sales": 0}, {"hours": 1, "sales": 2}]' --xkey "hours" --ykey "sales" --title "Sales Over Time"
+$ python3 plot.py --type line --data '[{"hours": 0, "sales": 0}, {"hours": 1, "sales": 2}]' --xkey "hours" --ykey "sales" --title "Sales Over Time"
 
 Dependencies:
 - termplotlib
