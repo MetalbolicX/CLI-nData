@@ -42,47 +42,11 @@ def plot_line(coordinates: PlotCoordinates, xkey: str, ykey: str, title: str, xl
     fig.plot(x, y, label=title)
     fig.show()
 
-def plot_horizontal_bar(dataset: PlotCoordinates, label_key: str, value_key: str, title: str, xlabel: str, ylabel: str) -> None:
-    """
-    Plots a bar chart (vertical or horizontal) using the provided dataset.
-
-    Args:
-        dataset (PlotCoordinates): A list of dictionaries containing the data to plot.
-        label_key (str): The key in each dictionary to use for bar labels.
-        value_key (str): The key in each dictionary to use for bar values.
-        title (str): The title of the bar chart.
-        xlabel (str): The label for the x-axis.
-        ylabel (str): The label for the y-axis.
-
-    Returns:
-        None
-    """
-    labels = [datum[label_key] for datum in dataset]
-    values = [datum[value_key] for datum in dataset]
+def plot_horizontal_bar(dataset: PlotCoordinates, xkey: str, ykey: str, title: str, xlabel: str, ylabel: str) -> None:
+    labels = [datum[xkey] for datum in dataset]
+    values = [datum[ykey] for datum in dataset]
     fig = tpl.figure()
-    fig.barh(values, labels, label=title)
-    fig.show()
-
-
-def plot_time_series(coordinates: PlotCoordinates, xkey: str, ykey: str, title: str, xlabel: str, ylabel: str) -> None:
-    """
-    Plots a time series using the provided data and displays it.
-
-    Args:
-        dataset (PlotCoordinates): A list of dictionaries containing the data points to plot.
-        xkey (str): The key to extract x-axis values from each data point.
-        ykey (str): The key to extract y-axis values from each data point.
-        title (str): The title of the plot and the label for the data series.
-        xlabel (str): The label for the x-axis.
-        ylabel (str): The label for the y-axis.
-
-    Returns:
-        None
-    """
-    x = [coordinate[xkey] for coordinate in coordinates]
-    y = [coordinate[ykey] for coordinate in coordinates]
-    fig = tpl.figure()
-    fig.plot(x, y, label=title)
+    fig.barh(values, labels)
     fig.show()
 
 def validate_json(data: str) -> PlotCoordinates:
@@ -116,8 +80,6 @@ def main() -> int:
     parser.add_argument("--ylabel", default="", help="Label for the Y-axis")
     parser.add_argument("--xkey", default="x", help="Key for X-axis values in JSON data")
     parser.add_argument("--ykey", default="y", help="Key for Y-axis values in JSON data")
-    parser.add_argument("--label_key", default="label", help="Key for labels in bar chart JSON data")
-    parser.add_argument("--value_key", default="value", help="Key for values in bar chart JSON data")
 
     args = parser.parse_args()
 
@@ -127,8 +89,7 @@ def main() -> int:
     # Using a dictionary to map plot types to functions
     plot_functions = {
         "line": lambda: plot_line(dataset, args.xkey, args.ykey, args.title, args.xlabel, args.ylabel),
-        "horizontal_bar": lambda: plot_horizontal_bar(dataset, args.label_key, args.value_key, args.title, args.xlabel, args.ylabel),
-        "time_series": lambda: plot_time_series(dataset, args.xkey, args.ykey, args.title, args.xlabel, args.ylabel),
+        "horizontal_bar": lambda: plot_horizontal_bar(dataset, args.xkey, args.ykey, args.title, args.xlabel, args.ylabel),
     }
 
     # Execute the appropriate plotting function
