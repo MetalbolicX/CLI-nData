@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 
 """
-This script generates various types of plots (line, scatter, bar, time series) using termplotlib.
+This script generates various types of plots (line, scatter, bar, time series) using termplotlib or gnuplot.
 
 Example usage:
-$ python3 plot.py --type line --data '[{"hours": 0, "sales": 0}, {"hours": 1, "sales": 2}]' --xkey "hours" --ykey "sales" --title "Sales Over Time"
+$ echo '[{"hours": 0, "sales": 0}, {"hours": 1, "sales": 2}]' | python3 plot.py --type line --xkey "hours" --ykey "sales" --title "Sales Over Time"
 
 Dependencies:
 - termplotlib
+- gnuplot (for scatter, vertical bar, and line time series charts)
 
 Author: José Martínez Santana
 """
@@ -15,40 +16,67 @@ Author: José Martínez Santana
 import argparse
 import json
 import sys
-from typing import Union
+from typing import List, Dict, Union
 import termplotlib as tpl
+import subprocess
 
 # Define type annotations for data points
-NumericalCoordinates = list[dict[str, Union[int, float]]]
-CategoricalCoordinates = list[dict[str, Union[int, float]]]
+LineScatterCoordinates = List[Dict[str, Union[int, float]]]
+BarInfo = List[Dict[str, Union[str, int, float]]]
 
-def plot_line(coordinates: NumericalCoordinates, xkey: str, ykey: str, title: str) -> None:
+def plot_with_gnuplot(data: LineScatterCoordinates, xkey: str, ykey: str, title: str, plot_type: str) -> None:
     """
-    Plots a line graph using the provided coordinates and axis labels.
+    Plots using gnuplot for scatter, vertical bar, and line time series charts.
 
     Args:
-        coordinates (NumericalCoordinates): A list of dictionaries containing data points for plotting.
-        xkey (str): The key to extract x-axis values from each coordinate.
-        ykey (str): The key to extract y-axis values from each coordinate.
-        title (str): The title of the plot and the label for the line.
+        data (LineScatterCoordinates): List of dictionaries containing data points.
+        xkey (str): Key for x-axis values.
+        ykey (str): Key for y-axis values.
+        title (str): Title of the plot.
+        plot_type (str): Type of plot (scatter, vertical_bar, line_time_series).
 
     Returns:
         None
     """
+    x = [str(point[xkey]) for point in data]
+    y = [str(point[ykey]) for point in data]
+
+    # Prepare data for gnuplot
+    gnuplot_data = "\n".join(f"{x[i]} {y[i]}" for i in range(len(x)))
+
+    # Determine gnuplot command based on plot type
+    gnuplot_command = [
+        "gnuplot",
+        "-e",
+        f"set term dumb; set title '{title}'; plot '-' using 1:2 with {plot_type}"
+    ]
+
+    # Execute gnuplot
+    process = subprocess.Popen(gnuplot_command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    stdout, stderr = process.communicate(input=gnuplot_data.encode())
+
+    if process.returncode != 0:
+        sys.stderr.write(f"Error: gnuplot failed with error:\n{stderr.decode()}\n")
+        sys.exit(1)
+
+    # Print the plot to the terminal
+    sys.stdout.write(stdout.decode())
+
+def plot_line(coordinates: LineScatterCoordinates, xkey: str, ykey: str, title: str) -> None:
     x = [coordinate[xkey] for coordinate in coordinates]
     y = [coordinate[ykey] for coordinate in coordinates]
     fig = tpl.figure()
     fig.plot(x, y, label=title)
     fig.show()
 
-def plot_horizontal_bar(dataset: CategoricalCoordinates, xkey: str, ykey: str) -> None:
+def plot_horizontal_bar(dataset: BarInfo, xkey: str, ykey: str) -> None:
     labels = [datum[xkey] for datum in dataset]
     values = [datum[ykey] for datum in dataset]
     fig = tpl.figure()
     fig.barh(values, labels)
     fig.show()
 
-def validate_json(data: str) -> Union[NumericalCoordinates, CategoricalCoordinates]:
+def validate_json(data: str) -> Union[LineScatterCoordinates, BarInfo]:
     try:
         return json.loads(data)
     except json.JSONDecodeError:
@@ -56,9 +84,9 @@ def validate_json(data: str) -> Union[NumericalCoordinates, CategoricalCoordinat
         sys.exit(1)
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Plot charts using termplotlib.")
-    parser.add_argument("--type", required=True, choices=["line", "scatter", "horizontal_bar", "time_series"], help="Type of plot")
-    parser.add_argument("--data", required=True, help="Input data in JSON format")
+    parser = argparse.ArgumentParser(description="Plot charts using termplotlib or gnuplot.")
+    parser.add_argument("--type", required=True, choices=["line", "scatter", "vertical_bar", "horizontal_bar", "time_series"], help="Type of plot")
+    parser.add_argument("--data", nargs="?", type=argparse.FileType("r"), default=sys.stdin, help="Input data in JSON format")
     parser.add_argument("--title", default="", help="Title of the chart")
     parser.add_argument("--xkey", default="x", help="Key for X-axis values in JSON data")
     parser.add_argument("--ykey", default="y", help="Key for Y-axis values in JSON data")
@@ -66,12 +94,15 @@ def main() -> int:
     args = parser.parse_args()
 
     # Validate JSON input
-    dataset = validate_json(args.data)
+    data = validate_json(args.data.read())
 
-    # Using a dictionary to map plot types to functions
+    # Strategy pattern using a dictionary to map plot types to functions
     plot_functions = {
-        "line": lambda: plot_line(dataset, args.xkey, args.ykey, args.title),
-        "horizontal_bar": lambda: plot_horizontal_bar(dataset, args.xkey, args.ykey),
+        "line": lambda: plot_line(data, args.xkey, args.ykey, args.title),
+        "scatter": lambda: plot_with_gnuplot(data, args.xkey, args.ykey, args.title, "points"),
+        "vertical_bar": lambda: plot_with_gnuplot(data, args.xkey, args.ykey, args.title, "boxes"),
+        "time_series": lambda: plot_with_gnuplot(data, args.xkey, args.ykey, args.title, "lines"),
+        "horizontal_bar": lambda: plot_horizontal_bar(data, args.xkey, args.ykey)
     }
 
     # Execute the appropriate plotting function
