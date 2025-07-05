@@ -19,19 +19,18 @@ from typing import Union
 import termplotlib as tpl
 
 # Define type annotations for data points
-PlotCoordinates = list[dict[str, Union[int, float]]]
+NumericalCoordinates = list[dict[str, Union[int, float]]]
+CategoricalCoordinates = list[dict[str, Union[int, float]]]
 
-def plot_line(coordinates: PlotCoordinates, xkey: str, ykey: str, title: str, xlabel: str, ylabel: str) -> None:
+def plot_line(coordinates: NumericalCoordinates, xkey: str, ykey: str, title: str) -> None:
     """
     Plots a line graph using the provided coordinates and axis labels.
 
     Args:
-        coordinates (PlotCoordinates): A list of dictionaries containing data points for plotting.
+        coordinates (NumericalCoordinates): A list of dictionaries containing data points for plotting.
         xkey (str): The key to extract x-axis values from each coordinate.
         ykey (str): The key to extract y-axis values from each coordinate.
         title (str): The title of the plot and the label for the line.
-        xlabel (str): The label for the x-axis.
-        ylabel (str): The label for the y-axis.
 
     Returns:
         None
@@ -42,29 +41,14 @@ def plot_line(coordinates: PlotCoordinates, xkey: str, ykey: str, title: str, xl
     fig.plot(x, y, label=title)
     fig.show()
 
-def plot_horizontal_bar(dataset: PlotCoordinates, xkey: str, ykey: str, title: str, xlabel: str, ylabel: str) -> None:
+def plot_horizontal_bar(dataset: CategoricalCoordinates, xkey: str, ykey: str) -> None:
     labels = [datum[xkey] for datum in dataset]
     values = [datum[ykey] for datum in dataset]
     fig = tpl.figure()
     fig.barh(values, labels)
     fig.show()
 
-def validate_json(data: str) -> PlotCoordinates:
-    """
-    Validates and parses a JSON string into a Python object.
-
-    Attempts to deserialize the provided JSON string `data` into a Python object.
-    If the input is not valid JSON, writes an error message to stderr and exits the program.
-
-    Args:
-        data (str): A string containing JSON data.
-
-    Returns:
-        PlotCoordinates: The deserialized Python object corresponding to the JSON input.
-
-    Raises:
-        SystemExit: If the input string is not valid JSON.
-    """
+def validate_json(data: str) -> Union[NumericalCoordinates, CategoricalCoordinates]:
     try:
         return json.loads(data)
     except json.JSONDecodeError:
@@ -76,8 +60,6 @@ def main() -> int:
     parser.add_argument("--type", required=True, choices=["line", "scatter", "horizontal_bar", "time_series"], help="Type of plot")
     parser.add_argument("--data", required=True, help="Input data in JSON format")
     parser.add_argument("--title", default="", help="Title of the chart")
-    parser.add_argument("--xlabel", default="", help="Label for the X-axis")
-    parser.add_argument("--ylabel", default="", help="Label for the Y-axis")
     parser.add_argument("--xkey", default="x", help="Key for X-axis values in JSON data")
     parser.add_argument("--ykey", default="y", help="Key for Y-axis values in JSON data")
 
@@ -88,8 +70,8 @@ def main() -> int:
 
     # Using a dictionary to map plot types to functions
     plot_functions = {
-        "line": lambda: plot_line(dataset, args.xkey, args.ykey, args.title, args.xlabel, args.ylabel),
-        "horizontal_bar": lambda: plot_horizontal_bar(dataset, args.xkey, args.ykey, args.title, args.xlabel, args.ylabel),
+        "line": lambda: plot_line(dataset, args.xkey, args.ykey, args.title),
+        "horizontal_bar": lambda: plot_horizontal_bar(dataset, args.xkey, args.ykey),
     }
 
     # Execute the appropriate plotting function
