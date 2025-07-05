@@ -4,7 +4,7 @@
 
 **Supported Versions:**
 
-![Python version](https://img.shields.io/badge/Python-%3E%3D3.8.0-blue)
+![Python version](https://img.shields.io/badge/Python-%3E%3D3.12.0-blue)
 
 ## 🚀 Quick Installation
 
