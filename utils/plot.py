@@ -42,13 +42,13 @@ def plot_with_gnuplot(data: LineScatterCoordinates, xkey: str, ykey: str, title:
     y = [str(point[ykey]) for point in data]
 
     # Prepare data for gnuplot
-    gnuplot_data = "\n".join(f"{x[i]} {y[i]}" for i in range(len(x)))
+    gnuplot_data = "\n".join(f"{i + 1} {y[i]} \"{x[i]}\"" for i in range(len(x)))
 
     # Determine gnuplot command based on plot type
     gnuplot_command = [
         "gnuplot",
         "-e",
-        f"set term dumb; set title '{title}'; plot '-' using 1:2 with {plot_type}"
+        f"set term dumb; set title '{title}'; set xtics rotate by -45; plot '-' using 1:2:xticlabels(3) with {plot_type}"
     ]
 
     # Execute gnuplot
