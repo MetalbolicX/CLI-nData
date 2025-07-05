@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """
 This script extracts HTML elements using an XPath query or CSS3 selector.
