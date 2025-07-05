@@ -8,13 +8,13 @@
 
 ## 🚀 Quick Installation
 
-Check the [Getting Started](https://metalbolicx.github.io/cli-ndata/#/getting-started) guide for detailed instructions on how to install and use CLI-nData.
+Check the [Getting Started](https://metalbolicx.github.io/CLI-nData/) guide for detailed instructions on how to install and use CLI-nData.
 
 ## 📚 Documentation
 
 <div align="center">
 
-[![view - Documentation](https://img.shields.io/badge/view-Documentation-blue?style=for-the-badge)](https://metalbolicx.github.io/cli-ndata/#/api-reference)
+[![view - Documentation](https://img.shields.io/badge/view-Documentation-blue?style=for-the-badge)](https://metalbolicx.github.io/CLI-nData/)
 
 </div>
 
