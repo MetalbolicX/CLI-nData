@@ -4,7 +4,7 @@
 This script generates various types of plots (line, scatter, bar, time series) using termplotlib.
 
 Example usage:
-$ python plot.py --type line --data '[{"x": 0, "y": 0}, {"x": 1, "y": 2}]' --title "Line Chart"
+$ python plot.py --type line --data '[{"hours": 0, "sales": 0}, {"hours": 1, "sales": 2}]' --xkey "hours" --ykey "sales" --title "Sales Over Time"
 
 Dependencies:
 - termplotlib
@@ -15,45 +15,92 @@ Author: José Martínez Santana
 import argparse
 import json
 import sys
-from typing import List, Dict, Union
+from typing import Union
 import termplotlib as tpl
 
 # Define type annotations for data points
-LineScatterCoordinates = List[Dict[str, Union[int, float]]]
-BarInfo = List[Dict[str, Union[str, int, float]]]
+PlotCoordinates = list[dict[str, Union[int, float]]]
 
-def plot_line(coordinates: LineScatterCoordinates, title: str, xlabel: str, ylabel: str) -> None:
-    x = [coordinate['x'] for coordinate in coordinates]
-    y = [coordinate['y'] for coordinate in coordinates]
+def plot_line(coordinates: PlotCoordinates, xkey: str, ykey: str, title: str, xlabel: str, ylabel: str) -> None:
+    """
+    Plots a line graph using the provided coordinates and axis labels.
+
+    Args:
+        coordinates (PlotCoordinates): A list of dictionaries containing data points for plotting.
+        xkey (str): The key to extract x-axis values from each coordinate.
+        ykey (str): The key to extract y-axis values from each coordinate.
+        title (str): The title of the plot and the label for the line.
+        xlabel (str): The label for the x-axis.
+        ylabel (str): The label for the y-axis.
+
+    Returns:
+        None
+    """
+    x = [coordinate[xkey] for coordinate in coordinates]
+    y = [coordinate[ykey] for coordinate in coordinates]
     fig = tpl.figure()
     fig.plot(x, y, label=title)
     fig.show()
 
-def plot_scatter(coordinates: LineScatterCoordinates, title: str, xlabel: str, ylabel: str) -> None:
-    x = [coordinate['x'] for coordinate in coordinates]
-    y = [coordinate['y'] for coordinate in coordinates]
+def plot_horizontal_bar(dataset: PlotCoordinates, label_key: str, value_key: str, title: str, xlabel: str, ylabel: str) -> None:
+    """
+    Plots a bar chart (vertical or horizontal) using the provided dataset.
+
+    Args:
+        dataset (PlotCoordinates): A list of dictionaries containing the data to plot.
+        label_key (str): The key in each dictionary to use for bar labels.
+        value_key (str): The key in each dictionary to use for bar values.
+        title (str): The title of the bar chart.
+        xlabel (str): The label for the x-axis.
+        ylabel (str): The label for the y-axis.
+
+    Returns:
+        None
+    """
+    labels = [datum[label_key] for datum in dataset]
+    values = [datum[value_key] for datum in dataset]
     fig = tpl.figure()
-    fig.scatter(x, y, label=title)
+    fig.barh(values, labels, label=title)
     fig.show()
 
-def plot_bar(dataset: BarInfo, title: str, xlabel: str, ylabel: str, orientation: str = 'vertical') -> None:
-    labels = [datum['label'] for datum in dataset]
-    values = [datum['value'] for datum in dataset]
-    fig = tpl.figure()
-    if orientation == 'vertical':
-        fig.bar(values, labels, label=title)
-    else:
-        fig.barh(values, labels, label=title)
-    fig.show()
 
-def plot_time_series(data: LineScatterCoordinates, title: str, xlabel: str, ylabel: str) -> None:
-    x = [point['x'] for point in data]
-    y = [point['y'] for point in data]
+def plot_time_series(coordinates: PlotCoordinates, xkey: str, ykey: str, title: str, xlabel: str, ylabel: str) -> None:
+    """
+    Plots a time series using the provided data and displays it.
+
+    Args:
+        dataset (PlotCoordinates): A list of dictionaries containing the data points to plot.
+        xkey (str): The key to extract x-axis values from each data point.
+        ykey (str): The key to extract y-axis values from each data point.
+        title (str): The title of the plot and the label for the data series.
+        xlabel (str): The label for the x-axis.
+        ylabel (str): The label for the y-axis.
+
+    Returns:
+        None
+    """
+    x = [coordinate[xkey] for coordinate in coordinates]
+    y = [coordinate[ykey] for coordinate in coordinates]
     fig = tpl.figure()
     fig.plot(x, y, label=title)
     fig.show()
 
-def validate_json(data: str) -> Union[LineScatterCoordinates, BarInfo]:
+def validate_json(data: str) -> PlotCoordinates:
+    """
+    Validates and parses a JSON string into a Python object.
+
+    Attempts to deserialize the provided JSON string `data` into a Python object.
+    If the input is not valid JSON, writes an error message to stderr and exits the program.
+
+    Args:
+        data (str): A string containing JSON data.
+
+    Returns:
+        PlotCoordinates: The deserialized Python object corresponding to the JSON input.
+
+    Raises:
+        SystemExit: If the input string is not valid JSON.
+    """
     try:
         return json.loads(data)
     except json.JSONDecodeError:
@@ -62,24 +109,26 @@ def validate_json(data: str) -> Union[LineScatterCoordinates, BarInfo]:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Plot charts using termplotlib.")
-    parser.add_argument("--type", required=True, choices=["line", "scatter", "bar", "time_series"], help="Type of plot")
+    parser.add_argument("--type", required=True, choices=["line", "scatter", "horizontal_bar", "time_series"], help="Type of plot")
     parser.add_argument("--data", required=True, help="Input data in JSON format")
     parser.add_argument("--title", default="", help="Title of the chart")
     parser.add_argument("--xlabel", default="", help="Label for the X-axis")
     parser.add_argument("--ylabel", default="", help="Label for the Y-axis")
-    parser.add_argument("--orientation", choices=["vertical", "horizontal"], default="vertical", help="Bar chart orientation")
+    parser.add_argument("--xkey", default="x", help="Key for X-axis values in JSON data")
+    parser.add_argument("--ykey", default="y", help="Key for Y-axis values in JSON data")
+    parser.add_argument("--label_key", default="label", help="Key for labels in bar chart JSON data")
+    parser.add_argument("--value_key", default="value", help="Key for values in bar chart JSON data")
 
     args = parser.parse_args()
 
     # Validate JSON input
-    data = validate_json(args.data)
+    dataset = validate_json(args.data)
 
-    # Strategy pattern using a dictionary to map plot types to functions
+    # Using a dictionary to map plot types to functions
     plot_functions = {
-        "line": lambda: plot_line(data, args.title, args.xlabel, args.ylabel),
-        "scatter": lambda: plot_scatter(data, args.title, args.xlabel, args.ylabel),
-        "bar": lambda: plot_bar(data, args.title, args.xlabel, args.ylabel, args.orientation),
-        "time_series": lambda: plot_time_series(data, args.title, args.xlabel, args.ylabel),
+        "line": lambda: plot_line(dataset, args.xkey, args.ykey, args.title, args.xlabel, args.ylabel),
+        "horizontal_bar": lambda: plot_horizontal_bar(dataset, args.label_key, args.value_key, args.title, args.xlabel, args.ylabel),
+        "time_series": lambda: plot_time_series(dataset, args.xkey, args.ykey, args.title, args.xlabel, args.ylabel),
     }
 
     # Execute the appropriate plotting function
