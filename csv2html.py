@@ -78,7 +78,7 @@ def csv_2_html(input_file: str, delimiter: str, suppress: bool) -> None:
         print("<title>CSV to HTML</title>")
         print("</head>")
         print("<body>")
-        print("<table border=\"1\">")
+        print("<table>")
         print("<thead>")
         print("<tr>")
         for header in headers:
@@ -92,7 +92,13 @@ def csv_2_html(input_file: str, delimiter: str, suppress: bool) -> None:
             if not suppress:
                 print("<tr>")
                 for value in row:
-                    print(f"<td>{html.escape(value)}</td>")
+                    # Check if the value contains the delimiter
+                    if delimiter in value:
+                        split_values = value.split(delimiter)
+                        for split_value in split_values:
+                            print(f"<td>{html.escape(split_value)}</td>")
+                    else:
+                        print(f"<td>{html.escape(value)}</td>")
                 print("</tr>")
 
         print("</tbody>")
