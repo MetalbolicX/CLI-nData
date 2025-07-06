@@ -1,26 +1,26 @@
 #!/usr/bin/env bash
-#
-# NAME
-#       trim -- trim output to a given height and width.
-#
-# USAGE
-#       trim [height] [width]
-#
-#       By default, output is trimmed to 10 lines and the width of the terminal.
-#       Pass a negative number to disable trimming the height and/or width.
-#       Before trimming, tabs are expanded to spaces.
-#
-# EXAMPLES
-#       seq 100 | trim
-#       seq 100 | trim 20
-#       seq 100 | trim 20 40
-#       seq 100 | trim -1 40
-#       seq 100 | trim 20 -1
-#
-# Author: Jeroen Janssens (https://jeroenjanssens.com)
-# Modified by: José Martínez Santana
-#
-# LICENSE: MIT (2021)
+
+: 'NAME
+    trim -- trim output to a given height and width.
+
+USAGE
+    trim [height] [width]
+
+    By default, output is trimmed to 10 lines and the width of the terminal.
+    Pass a negative number to disable trimming the height and/or width.
+    Before trimming, tabs are expanded to spaces.
+
+EXAMPLES
+    seq 100 | trim
+    seq 100 | trim 20
+    seq 100 | trim 20 40
+    seq 100 | trim -1 40
+    seq 100 | trim 20 -1
+
+Author: Jeroen Janssens (https://jeroenjanssens.com)
+Modified by: José Martínez Santana
+
+LICENSE: MIT (2021)'
 
 set -euf -o pipefail
 
