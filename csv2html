@@ -1,126 +1,99 @@
 #!/usr/bin/env python3
 import csv
 import argparse
-import os
 import html
+import sys
+from typing import List
 
-def is_header_row(row: list[str]) -> bool:
+def csv_2_html(input_data: str, delimiter: str, suppress: bool) -> int:
     """
-    Determine if a row from the CSV file is a header row.
-
-    A header row is identified as a row containing non-numeric values.
-    This function checks if all values in the row are non-empty and non-numeric.
+    Convert CSV data to an HTML table and write it to stdout.
 
     Args:
-        row (list[str]): A list of strings representing a row from the CSV file.
-
-    Returns:
-        bool: True if the row is a header row, False otherwise.
-    """
-    for value in row:
-        if value.strip() == "" or value.isnumeric():
-            return False
-    return True
-
-def generate_default_headers(count: int) -> list[str]:
-    """
-    Generate default column headers for a CSV file.
-
-    If the CSV file does not contain headers, this function generates
-    default headers in the format 'Column1', 'Column2', ..., 'ColumnN'.
-
-    Args:
-        count (int): The number of columns in the CSV file.
-
-    Returns:
-        list[str]: A list of default column headers.
-    """
-    return [f"Column{i+1}" for i in range(count)]
-
-def csv_2_html(input_file: str, delimiter: str, suppress: bool) -> None:
-    """
-    Convert a CSV file to an HTML table and print it to the console.
-
-    This function reads a CSV file, processes its contents, and generates
-    an HTML table. If the CSV file does not contain headers, default headers
-    are generated. Rows can be suppressed from being printed using the suppress flag.
-
-    Args:
-        input_file (str): Path to the input CSV file.
-        delimiter (str): The delimiter used in the CSV file (e.g., ',' or ';').
+        input_data (str): Raw CSV text to be converted to HTML.
+        delimiter (str): The delimiter used in the CSV data (e.g., ',' or ';').
         suppress (bool): If True, suppress printing rows to the console.
 
     Returns:
-        None
+        int: Exit code (0 for success, 1 for failure).
     """
-    if not os.path.isfile(input_file):
-        print(f"Error: File '{input_file}' does not exist.")
-        return
+    try:
+        rows: List[List[str]] = list(csv.reader(input_data.splitlines(), delimiter=delimiter))
+    except csv.Error as e:
+        sys.stderr.write(f"Error: Failed to parse CSV: {e}\n")
+        return 1
 
-    with open(input_file, newline='', encoding='utf-8') as csvfile:
-        reader = csv.reader(csvfile, delimiter=delimiter)
+    if not rows:
+        sys.stderr.write("Error: CSV data is empty.\n")
+        return 1
 
-        try:
-            headers = next(reader)
-        except StopIteration:
-            print("Error: CSV file is empty.")
-            return
+    # Extract headers from the first row
+    headers: List[str] = rows[0]
+    data_rows: List[List[str]] = rows[1:]
 
-        # Check if headers are valid
-        if not is_header_row(headers):
-            headers = generate_default_headers(len(headers))
-            print("Warning: Missing headers in CSV file. Default headers generated.")
+    # Start HTML generation
+    output: List[str] = [
+        "<!DOCTYPE html>",
+        "<html>",
+        "<head>",
+        "<title>CSV to HTML</title>",
+        "</head>",
+        "<body>",
+        "<table>",
+        "<thead>",
+        "<tr>",
+        *[f"<th>{html.escape(header)}</th>" for header in headers],
+        "</tr>",
+        "</thead>",
+        "<tbody>",
+    ]
 
-        # Start HTML generation
-        print("<!DOCTYPE html>")
-        print("<html>")
-        print("<head>")
-        print("<title>CSV to HTML</title>")
-        print("</head>")
-        print("<body>")
-        print("<table>")
-        print("<thead>")
-        print("<tr>")
-        for header in headers:
-            print(f"<th>{html.escape(header)}</th>")
-        print("</tr>")
-        print("</thead>")
-        print("<tbody>")
+    # Process rows one by one
+    if not suppress:
+        output.extend(
+            [
+                "<tr>" + "".join(
+                    f"<td>{html.escape(value)}</td>" for value in row
+                ) + "</tr>"
+                for row in data_rows
+            ]
+        )
 
-        # Process rows one by one
-        for row in reader:
-            if not suppress:
-                print("<tr>")
-                for value in row:
-                    # Check if the value contains the delimiter
-                    if delimiter in value:
-                        split_values = value.split(delimiter)
-                        for split_value in split_values:
-                            print(f"<td>{html.escape(split_value)}</td>")
-                    else:
-                        print(f"<td>{html.escape(value)}</td>")
-                print("</tr>")
+    output.extend(["</tbody>", "</table>", "</body>", "</html>"])
 
-        print("</tbody>")
-        print("</table>")
-        print("</body>")
-        print("</html>")
+    # Write output to stdout
+    sys.stdout.write("\n".join(output) + "\n")
+    return 0
 
-if __name__ == "__main__":
+def main() -> int:
     """
     Entry point for the script.
 
     Parses command-line arguments and calls the csv_to_html function
-    to convert the specified CSV file to HTML.
+    to convert the specified CSV text to HTML.
     """
     parser = argparse.ArgumentParser(description="Convert CSV to HTML.")
-    parser.add_argument("input_file", help="Path to the input CSV file.")
-    parser.add_argument("-d", "--delimiter", default=",", help="Specify the CSV delimiter (default: ',').")
-    parser.add_argument("-s", "--suppress", action="store_true", help="Suppress printing each row to the screen.")
+    parser.add_argument(
+        "input",
+        nargs="?",
+        type=str,
+        default=sys.stdin.read(),
+        help="Raw CSV text to be converted to HTML.",
+    )
+    parser.add_argument(
+        "-d", "--delimiter", default=",", help="Specify the CSV delimiter (default: ',')."
+    )
+    parser.add_argument(
+        "-s", "--suppress", action="store_true", help="Suppress printing each row to the screen."
+    )
     args = parser.parse_args()
 
-    input_file: str = args.input_file
+    input_data: str = args.input
     delimiter: str = args.delimiter
     suppress: bool = args.suppress
 
-    csv_2_html(input_file, delimiter, suppress)
+    return csv_2_html(input_data, delimiter, suppress)
+
+
+if __name__ == "__main__":
+    sys.exit(main())
