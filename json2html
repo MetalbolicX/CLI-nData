@@ -4,32 +4,21 @@ import argparse
 import os
 import html
 import sys
-from typing import List, Dict, Union, Any
+from typing import List, Dict, Any
 
-
-def json_2_html(input_data: str, suppress: bool, is_file: bool) -> int:
+def json_2_html(input_data: str, suppress: bool) -> int:
     """
     Convert JSON data to an HTML table and write it to stdout.
 
     Args:
-        input_data (str): Path to the input JSON file or raw JSON text.
+        input_data (str): Raw JSON text to be converted to HTML.
         suppress (bool): If True, suppress printing rows to the console.
-        is_file (bool): If True, treat input_data as a file path; otherwise, treat it as raw JSON text.
 
     Returns:
         int: Exit code (0 for success, 1 for failure).
     """
     try:
-        data: Union[List[Dict[str, Any]], None]
-        if is_file:
-            if not os.path.isfile(input_data):
-                sys.stderr.write(f"Error: File '{input_data}' does not exist.\n")
-                return 1
-
-            with open(input_data, "r", encoding="utf-8") as jsonfile:
-                data = json.load(jsonfile)
-        else:
-            data = json.loads(input_data)
+        data: List[Dict[str, Any]] = json.loads(input_data)
     except json.JSONDecodeError as e:
         sys.stderr.write(f"Error: Failed to parse JSON: {e}\n")
         return 1
@@ -80,7 +69,6 @@ def json_2_html(input_data: str, suppress: bool, is_file: bool) -> int:
     sys.stdout.write("\n".join(output) + "\n")
     return 0
 
-
 def main() -> int:
     """
     Entry point for the script.
@@ -104,7 +92,7 @@ def main() -> int:
     input_data: str = args.input
     suppress: bool = args.suppress
 
-    return json_2_html(input_data, suppress, is_file=False)
+    return json_2_html(input_data, suppress)
 
 
 if __name__ == "__main__":
