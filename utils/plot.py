@@ -85,11 +85,11 @@ def validate_json(data: str) -> Union[LineScatterCoordinates, BarInfo]:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Plot charts using termplotlib or gnuplot.")
-    parser.add_argument("--type", required=True, choices=["line", "scatter", "vertical_bar", "horizontal_bar", "time_series"], help="Type of plot")
-    parser.add_argument("--data", nargs="?", type=argparse.FileType("r"), default=sys.stdin, help="Input data in JSON format")
-    parser.add_argument("--title", default="", help="Title of the chart")
-    parser.add_argument("--xkey", default="x", help="Key for X-axis values in JSON data")
-    parser.add_argument("--ykey", default="y", help="Key for Y-axis values in JSON data")
+    parser.add_argument("-t", "--type", required=True, choices=["line", "scatter", "vertical_bar", "horizontal_bar", "time_series"], help="Type of plot")
+    parser.add_argument("-d", "--data", nargs="?", type=argparse.FileType("r"), default=sys.stdin, help="Input data in JSON format")
+    parser.add_argument("-T", "--title", default="", help="Title of the chart")
+    parser.add_argument("-x", "--xkey", default="x", help="Key for X-axis values in JSON data")
+    parser.add_argument("-y", "--ykey", default="y", help="Key for Y-axis values in JSON data")
 
     args = parser.parse_args()
 
@@ -113,6 +113,7 @@ def main() -> int:
         sys.exit(1)
 
     return 0
+
 
 if __name__ == "__main__":
     sys.exit(main())
