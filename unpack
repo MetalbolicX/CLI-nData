@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# unpack: Extract common file formats
+: 'unpack: Extract common file formats
 
-# Dependencies: unrar, unzip, p7zip-full
+Dependencies: unrar, unzip, p7zip-full
 
-# Author: Patrick Brisbin
-# From: http://linuxtidbits.wordpress.com/2009/08/04/week-of-bash-scripts-extract/
-# Modified by: José Martínez Santana
+Author: Patrick Brisbin
+From: http://linuxtidbits.wordpress.com/2009/08/04/week-of-bash-scripts-extract/
+Modified by: José Martínez Santana'
 
 # Default target directory
 TARGET_DIR=$(pwd)
