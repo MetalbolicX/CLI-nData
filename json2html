@@ -86,29 +86,25 @@ def main() -> int:
     Entry point for the script.
 
     Parses command-line arguments and calls the json_to_html function
-    to convert the specified JSON file or text to HTML.
+    to convert the specified JSON text to HTML.
     """
     parser = argparse.ArgumentParser(description="Convert JSON to HTML.")
     parser.add_argument(
         "input",
         nargs="?",
-        type=argparse.FileType("r", encoding="utf-8"),
-        default=sys.stdin,
-        help="Path to the input JSON file or raw JSON text.",
+        type=str,
+        default=sys.stdin.read(),
+        help="Raw JSON text to be converted to HTML.",
     )
     parser.add_argument(
         "-s", "--suppress", action="store_true", help="Suppress printing each row to the screen."
     )
-    parser.add_argument(
-        "-t", "--text", action="store_true", help="Treat input as raw JSON text instead of a file."
-    )
     args = parser.parse_args()
 
-    input_data: str = args.input.read()
+    input_data: str = args.input
     suppress: bool = args.suppress
-    is_file: bool = not args.text and args.input != sys.stdin
 
-    return json_2_html(input_data, suppress, is_file)
+    return json_2_html(input_data, suppress, is_file=False)
 
 
 if __name__ == "__main__":
