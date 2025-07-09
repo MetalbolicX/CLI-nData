@@ -45,29 +45,14 @@ def csv_to_html(input_data: str, delimiter: str, suppress_data: bool) -> str:
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CSV to HTML Table</title>
-    <style>
-        table {{
-            border-collapse: collapse;
-            width: 100%;
-            margin: 20px 0;
-        }}
-        th, td {{
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: left;
-        }}
-        th {{
-            background-color: #f2f2f2;
-            font-weight: bold;
-        }}
-        tr:nth-child(even) {{
-            background-color: #f9f9f9;
-        }}
-    </style>
+    <link rel="stylesheet" href="https://unpkg.com/@colinaut/action-table/dist/action-table.css">
+    <script type="module" src="https://unpkg.com/@colinaut/action-table/dist/index.js"></script>
 </head>
 <body>
     <h1>CSV Data Table</h1>
-    {html_table}
+    <action-table>
+        {html_table}
+    </action-table>
 </body>
 </html>"""
 
