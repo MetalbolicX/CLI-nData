@@ -2,13 +2,13 @@
 import csv
 import argparse
 import sys
-from typing import List, Optional
+from typing import List
 from tabulate import tabulate
 
 
 def csv_to_html(input_data: str, delimiter: str, suppress_data: bool) -> str:
     """
-    Convert CSV data to an HTML table.
+    Convert CSV data to a complete HTML document with table.
 
     Args:
         input_data (str): Raw CSV text to be converted to HTML.
@@ -16,7 +16,7 @@ def csv_to_html(input_data: str, delimiter: str, suppress_data: bool) -> str:
         suppress_data (bool): If True, suppress data rows (headers only).
 
     Returns:
-        str: HTML table string.
+        str: Complete HTML document string with table.
     """
     clean_input: str = input_data.strip()
     if not clean_input:
@@ -36,10 +36,42 @@ def csv_to_html(input_data: str, delimiter: str, suppress_data: bool) -> str:
     if not headers or all(not header.strip() for header in headers):
         raise ValueError("No valid headers found in CSV data")
 
-    if suppress_data:
-        return tabulate([], headers=headers, tablefmt="html")
-    else:
-        return tabulate(data_rows, headers=headers, tablefmt="html")
+    table_data = [] if suppress_data else data_rows
+    html_table: str = tabulate(table_data, headers=headers, tablefmt="html")
+
+    html_document: str = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSV to HTML Table</title>
+    <style>
+        table {{
+            border-collapse: collapse;
+            width: 100%;
+            margin: 20px 0;
+        }}
+        th, td {{
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }}
+        th {{
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }}
+        tr:nth-child(even) {{
+            background-color: #f9f9f9;
+        }}
+    </style>
+</head>
+<body>
+    <h1>CSV Data Table</h1>
+    {html_table}
+</body>
+</html>"""
+
+    return html_document
 
 
 def main() -> int:
@@ -73,14 +105,14 @@ def main() -> int:
 
     try:
         input_data: str = sys.stdin.read()
-        html_table: str = csv_to_html(input_data, args.delimiter, args.suppress)
+        html_document: str = csv_to_html(input_data, args.delimiter, args.suppress)
 
         if args.output:
             with open(args.output, "w", encoding="utf-8") as output_file:
-                output_file.write(html_table)
-            print(f"HTML table written to {args.output}")
+                output_file.write(html_document)
+            print(f"HTML document written to {args.output}")
         else:
-            print(html_table)
+            print(html_document)
 
         return 0
     except ValueError as e:
