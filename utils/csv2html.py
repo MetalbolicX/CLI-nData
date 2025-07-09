@@ -2,7 +2,7 @@
 import csv
 import argparse
 import sys
-from typing import List
+from typing import List, Optional
 from tabulate import tabulate
 
 
@@ -59,6 +59,11 @@ def main() -> int:
         action="store_true",
         help="Suppress data rows (headers only)"
     )
+    parser.add_argument(
+        "-o", "--output",
+        type=str,
+        help="Output file path (default: stdout)"
+    )
 
     args = parser.parse_args()
 
@@ -69,10 +74,20 @@ def main() -> int:
     try:
         input_data: str = sys.stdin.read()
         html_table: str = csv_to_html(input_data, args.delimiter, args.suppress)
-        print(html_table)
+
+        if args.output:
+            with open(args.output, "w", encoding="utf-8") as output_file:
+                output_file.write(html_table)
+            print(f"HTML table written to {args.output}")
+        else:
+            print(html_table)
+
         return 0
     except ValueError as e:
         print(f"Error: {e}", file=sys.stderr)
+        return 1
+    except IOError as e:
+        print(f"File error: {e}", file=sys.stderr)
         return 1
     except Exception as e:
         print(f"Unexpected error: {e}", file=sys.stderr)
