@@ -13,3 +13,6 @@ applyTo: "**/*.py"
 - Use the `if __name__ == "__main__":` construct to allow or prevent parts of code from being run when the modules are imported.
 - Take advantage of the truthy and falsy values in Python to simplify conditions. For example, instead of checking if a variable is not `None`, you can simply check if it is truthy.
 - Follow the PEP 8 style guide for Python code, which includes guidelines for naming conventions, indentation, line length, and more.
+- To get a value from a dictionary use the `get` method to avoid `KeyError` exceptions. For example, use `my_dict.get("key", default_value)` to provide a default value if the key does not exist.
+- Use `enumerate` when you need both the index and the value from a list or iterable.
+- Use `zip` to iterate over multiple iterables in parallel.
