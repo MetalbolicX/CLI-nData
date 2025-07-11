@@ -5,6 +5,7 @@
 
 USAGE
     trim [height] [width]
+    trim --help
 
     By default, output is trimmed to 10 lines and the width of the terminal.
     Pass a negative number to disable trimming the height and/or width.
@@ -22,50 +23,140 @@ Modified by: José Martínez Santana
 
 LICENSE: MIT (2021)'
 
-set -euf -o pipefail
+set -eo pipefail
 
-# Validate input arguments
-if ! [[ "${1:-10}" =~ ^-?[0-9]+$ ]]; then
-    echo "Error: HEIGHT must be an integer." >&2
-    exit 1
-fi
+# Global readonly variables
+readonly PROGNAME="$(basename "$0")"
+readonly PROGDIR="$(readlink -m "$(dirname "$0")")"
+readonly DEFAULT_HEIGHT=10
+readonly FALLBACK_WIDTH=80
 
-if ! [[ "${2:-$(tput cols)}" =~ ^-?[0-9]+$ ]]; then
-    echo "Error: WIDTH must be an integer." >&2
-    exit 1
-fi
+usage() {
+    cat << EOF
+NAME
+    ${PROGNAME} -- trim output to a given height and width.
 
-HEIGHT="${1:-10}"
-WIDTH="${2:-$(tput cols)}"
+USAGE
+    ${PROGNAME} [height] [width]
+    ${PROGNAME} --help
 
-# Fallback for WIDTH if tput fails
-if ! [[ "${WIDTH}" =~ ^[0-9]+$ ]]; then
-    WIDTH=80
-fi
+DESCRIPTION
+    By default, output is trimmed to ${DEFAULT_HEIGHT} lines and the width of the terminal.
+    Pass a negative number to disable trimming the height and/or width.
+    Before trimming, tabs are expanded to spaces.
 
-expand |
-awk -v height="${HEIGHT}" -v width="${WIDTH}" '
-# Print a line, trimming to the specified width
-function tprint() {
-    if (width > 0 && length($0) > width) {
-        print substr($0, 1, width - 1) "…"
-    } else {
-        print
-    }
+ARGUMENTS
+    height    Maximum number of lines to display (default: ${DEFAULT_HEIGHT})
+              Use -1 to disable height limiting
+    width     Maximum character width per line (default: terminal width)
+              Use -1 to disable width limiting
+
+EXAMPLES
+    seq 100 | ${PROGNAME}
+    seq 100 | ${PROGNAME} 20
+    seq 100 | ${PROGNAME} 20 40
+    seq 100 | ${PROGNAME} -1 40
+    seq 100 | ${PROGNAME} 20 -1
+
+Author: Jeroen Janssens (https://jeroenjanssens.com)
+Modified by: José Martínez Santana
+EOF
 }
 
-# Main processing block
-height <= 0 || NR <= height {
-    tprint()
+validate_arguments() {
+    local height="${1:-${DEFAULT_HEIGHT}}"
+    local width="${2:-}"
+
+    if ! [[ "${height}" =~ ^-?[0-9]+$ ]]; then
+        echo "Error: HEIGHT '${height}' must be an integer." >&2
+        return 1
+    fi
+
+    if [[ -n "${width}" ]] && ! [[ "${width}" =~ ^-?[0-9]+$ ]]; then
+        echo "Error: WIDTH '${width}' must be an integer." >&2
+        return 1
+    fi
+
+    return 0
 }
 
-# End block for handling overflow
-END {
-    if (height > 0) {
-        if (NR == height + 1) {
-            tprint()
-        } else if (NR > height + 1) {
-            print "… with " (NR - height) " more lines"
+get_terminal_width() {
+    local width_arg="${1:-}"
+
+    # If width argument is provided, use it
+    if [[ -n "${width_arg}" ]]; then
+        echo "${width_arg}"
+        return 0
+    fi
+
+    # Try to get terminal width, fallback to default if it fails
+    local terminal_width
+    if terminal_width="$(tput cols 2>/dev/null)" && [[ "${terminal_width}" =~ ^[0-9]+$ ]]; then
+        echo "${terminal_width}"
+    else
+        echo "${FALLBACK_WIDTH}"
+    fi
+}
+
+process_input() {
+    local height="$1"
+    local width="$2"
+
+    expand | awk -v height="${height}" -v width="${width}" '
+    # Print a line, trimming to the specified width
+    function tprint() {
+        if (width > 0 && length($0) > width) {
+            print substr($0, 1, width - 1) "…"
+        } else {
+            print
         }
     }
-}'
+
+    # Main processing block
+    height <= 0 || NR <= height {
+        tprint()
+    }
+
+    # End block for handling overflow
+    END {
+        if (height > 0 && NR > height) {
+            remaining_lines = NR - height
+            if (remaining_lines == 1) {
+                # Show the last line that was cut off
+                tprint()
+            } else {
+                # Show summary of remaining lines
+                print "… with " remaining_lines " more lines"
+            }
+        }
+    }'
+}
+
+
+main() {
+    local height width
+
+    # Handle help flag
+    if [[ "${1:-}" == "--help" ]] || [[ "${1:-}" == "-h" ]]; then
+        usage
+        return 0
+    fi
+
+    # Set default values
+    height="${1:-${DEFAULT_HEIGHT}}"
+
+    # Validate arguments
+    if ! validate_arguments "${height}" "${2:-}"; then
+        echo "Use '${PROGNAME} --help' for usage information." >&2
+        return 1
+    fi
+
+    # Get terminal width with proper fallback
+    width="$(get_terminal_width "${2:-}")"
+
+    # Process input
+    process_input "${height}" "${width}"
+}
+
+# Execute main function only if script is run directly
+[[ "$0" == "$BASH_SOURCE" ]] && main "$@"
