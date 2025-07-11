@@ -1,81 +1,347 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 : 'unpack: Extract common file formats
 
-Dependencies: unrar, unzip, p7zip-full
+Dependencies: unrar, unzip, p7zip-full, tar, gzip, bzip2
 
 Author: Patrick Brisbin
 From: http://linuxtidbits.wordpress.com/2009/08/04/week-of-bash-scripts-extract/
-Modified by: José Martínez Santana'
+Modified by: José Martínez Santana
+Refactored: Following bash best practices'
 
-# Default target directory
-TARGET_DIR=$(pwd)
+# Global constants
+readonly PROGNAME="$(basename "$0")"
+readonly PROGDIR="$(readlink -m "$(dirname "$0")")"
+readonly SUPPORTED_FORMATS=".7z, .tar.bz2, .bz2, .deb, .tar.gz, .gz, .tar, .tbz2, .tar.xz, .tgz, .rar, .zip, .Z"
 
-# Parse flags
-while getopts "hd:" OPTION; do
-    case $OPTION in
-        h)
-            echo "Usage: ${0##*/} [-d TARGET_DIR] <archive> [archive2 ...] - extract common file formats"
-            echo "Supported formats: .7z, .tar.bz2, .bz2, .deb, .tar.gz, .gz, .tar, .tbz2, .tar.xz, .tgz, .rar, .zip, .Z"
-            exit 0
-            ;;
-        d)
-            TARGET_DIR="$OPTARG"
-            ;;
-        *)
-            echo "Error: Invalid option"
-            exit 1
-            ;;
-    esac
-done
+# Default values
+DEFAULT_TARGET_DIR="$(pwd)"
+VERBOSE=0
+DRY_RUN=0
 
-# Shift parsed options to process file arguments
-shift $((OPTIND - 1))
+# Required programs and their corresponding formats
+declare -A REQUIRED_PROGRAMS=(
+    ["7z"]="7z"
+    ["unrar"]="rar"
+    ["unzip"]="zip"
+    ["tar"]="tar tar.gz tar.bz2 tbz2 tar.xz tgz"
+    ["bunzip2"]="bz2"
+    ["gunzip"]="gz"
+    ["uncompress"]="Z"
+    ["ar"]="deb"
+)
+
+# Usage function
+usage() {
+    cat << EOF
+Usage: ${PROGNAME} [-h] [-d TARGET_DIR] [-v] [-n] <archive> [archive2 ...]
+
+Extract common file formats to a target directory.
+
+Options:
+    -h              Show this help message
+    -d TARGET_DIR   Target directory for extraction (default: current directory)
+    -v              Verbose output
+    -n              Dry run - show what would be done without executing
+
+Supported formats: ${SUPPORTED_FORMATS}
+
+Dependencies: ${!REQUIRED_PROGRAMS[*]}
+EOF
+}
+
+# Error logging function
+log_error() {
+    echo "Error: $*" >&2
+}
+
+# Warning logging function
+log_warning() {
+    echo "Warning: $*" >&2
+}
+
+# Info logging function
+log_info() {
+    if [[ "${VERBOSE}" -eq 1 ]]; then
+        echo "Info: $*"
+    fi
+}
+
+# Check if command exists
+command_exists() {
+    local cmd="$1"
+    command -v "${cmd}" &> /dev/null
+}
 
 # Validate target directory
-if [ ! -d "$TARGET_DIR" ]; then
-    echo "Error: Target directory '$TARGET_DIR' does not exist."
-    exit 1
-fi
+validate_target_directory() {
+    local target_dir="$1"
 
-# Required programs
-req_progs=(7z unrar unzip)
-missing_progs=()
-for p in "${req_progs[@]}"; do
-    if ! command -v "$p" &> /dev/null; then
-        missing_progs+=("$p")
+    if [[ ! -d "${target_dir}" ]]; then
+        log_error "Target directory '${target_dir}' does not exist."
+        return 1
     fi
-done
 
-if [ "${#missing_progs[@]}" -gt 0 ]; then
-    echo "Warning: The following programs are not installed: ${missing_progs[*]}"
-    echo "Some formats may not be supported."
-fi
+    if [[ ! -w "${target_dir}" ]]; then
+        log_error "Target directory '${target_dir}' is not writable."
+        return 1
+    fi
 
-# Process each file passed as an argument
-for FILE in "$@"; do
-    # Test if file exists
-    if [ ! -f "$FILE" ]; then
-        echo "Error: File '$FILE' does not exist."
-        continue
+    return 0
+}
+
+# Check required programs
+check_dependencies() {
+    local missing_programs=()
+
+    for program in "${!REQUIRED_PROGRAMS[@]}"; do
+        if ! command_exists "${program}"; then
+            missing_programs+=("${program}")
+        fi
+    done
+
+    if [[ "${#missing_programs[@]}" -gt 0 ]]; then
+        log_warning "The following programs are not installed: ${missing_programs[*]}"
+        log_warning "Some formats may not be supported."
+        return 1
+    fi
+
+    return 0
+}
+
+# Get basename without extension for complex extensions
+get_basename_without_extension() {
+    local filename="$1"
+    local basename_file
+
+    basename_file="$(basename "${filename}")"
+
+    case "${basename_file}" in
+        *.tar.bz2|*.tar.gz|*.tar.xz)
+            echo "${basename_file%.*.*}"
+            ;;
+        *)
+            echo "${basename_file%.*}"
+            ;;
+    esac
+}
+
+# Validate file before extraction
+validate_file() {
+    local file="$1"
+
+    if [[ ! -f "${file}" ]]; then
+        log_error "File '${file}' does not exist."
+        return 1
+    fi
+
+    if [[ ! -r "${file}" ]]; then
+        log_error "File '${file}' is not readable."
+        return 1
+    fi
+
+    return 0
+}
+
+# Extract single file
+extract_file() {
+    local file="$1"
+    local target_dir="$2"
+    local basename_without_ext
+
+    if ! validate_file "${file}"; then
+        return 1
+    fi
+
+    basename_without_ext="$(get_basename_without_extension "${file}")"
+
+    log_info "Extracting '${file}' to '${target_dir}'..."
+
+    if [[ "${DRY_RUN}" -eq 1 ]]; then
+        echo "Would extract: ${file} -> ${target_dir}"
+        return 0
     fi
 
     # Extract file by using extension as reference
-    echo "Extracting '$FILE' to '$TARGET_DIR'..."
-    case "$FILE" in
-        *.7z ) 7z x "$FILE" -o"$TARGET_DIR" ;;
-        *.tar.bz2 ) tar xvjf "$FILE" -C "$TARGET_DIR" ;;
-        *.bz2 ) bunzip2 -c "$FILE" > "$TARGET_DIR/${FILE%.bz2}" ;;
-        *.deb ) ar vx "$FILE" -C "$TARGET_DIR" ;;
-        *.tar.gz ) tar xvf "$FILE" -C "$TARGET_DIR" ;;
-        *.gz ) gunzip -c "$FILE" > "$TARGET_DIR/${FILE%.gz}" ;;
-        *.tar ) tar xvf "$FILE" -C "$TARGET_DIR" ;;
-        *.tbz2 ) tar xvjf "$FILE" -C "$TARGET_DIR" ;;
-        *.tar.xz ) tar xvf "$FILE" -C "$TARGET_DIR" ;;
-        *.tgz ) tar xvzf "$FILE" -C "$TARGET_DIR" ;;
-        *.rar ) unrar x "$FILE" "$TARGET_DIR" ;;
-        *.zip ) unzip "$FILE" -d "$TARGET_DIR" ;;
-        *.Z ) uncompress -c "$FILE" > "$TARGET_DIR/${FILE%.Z}" ;;
-        * ) echo "Unsupported file format: '$FILE'" ;;
+    case "${file}" in
+        *.7z)
+            if ! command_exists "7z"; then
+                log_error "7z is required for .7z files but not installed."
+                return 1
+            fi
+            7z x "${file}" -o"${target_dir}" -y
+            ;;
+        *.tar.bz2)
+            if ! command_exists "tar"; then
+                log_error "tar is required for .tar.bz2 files but not installed."
+                return 1
+            fi
+            tar xjf "${file}" -C "${target_dir}"
+            ;;
+        *.bz2)
+            if ! command_exists "bunzip2"; then
+                log_error "bunzip2 is required for .bz2 files but not installed."
+                return 1
+            fi
+            bunzip2 -c "${file}" > "${target_dir}/${basename_without_ext}"
+            ;;
+        *.deb)
+            if ! command_exists "ar"; then
+                log_error "ar is required for .deb files but not installed."
+                return 1
+            fi
+            (cd "${target_dir}" && ar x "$(realpath "${file}")")
+            ;;
+        *.tar.gz)
+            if ! command_exists "tar"; then
+                log_error "tar is required for .tar.gz files but not installed."
+                return 1
+            fi
+            tar xzf "${file}" -C "${target_dir}"
+            ;;
+        *.gz)
+            if ! command_exists "gunzip"; then
+                log_error "gunzip is required for .gz files but not installed."
+                return 1
+            fi
+            gunzip -c "${file}" > "${target_dir}/${basename_without_ext}"
+            ;;
+        *.tar)
+            if ! command_exists "tar"; then
+                log_error "tar is required for .tar files but not installed."
+                return 1
+            fi
+            tar xf "${file}" -C "${target_dir}"
+            ;;
+        *.tbz2)
+            if ! command_exists "tar"; then
+                log_error "tar is required for .tbz2 files but not installed."
+                return 1
+            fi
+            tar xjf "${file}" -C "${target_dir}"
+            ;;
+        *.tar.xz)
+            if ! command_exists "tar"; then
+                log_error "tar is required for .tar.xz files but not installed."
+                return 1
+            fi
+            tar xJf "${file}" -C "${target_dir}"
+            ;;
+        *.tgz)
+            if ! command_exists "tar"; then
+                log_error "tar is required for .tgz files but not installed."
+                return 1
+            fi
+            tar xzf "${file}" -C "${target_dir}"
+            ;;
+        *.rar)
+            if ! command_exists "unrar"; then
+                log_error "unrar is required for .rar files but not installed."
+                return 1
+            fi
+            unrar x "${file}" "${target_dir}/"
+            ;;
+        *.zip)
+            if ! command_exists "unzip"; then
+                log_error "unzip is required for .zip files but not installed."
+                return 1
+            fi
+            unzip "${file}" -d "${target_dir}"
+            ;;
+        *.Z)
+            if ! command_exists "uncompress"; then
+                log_error "uncompress is required for .Z files but not installed."
+                return 1
+            fi
+            uncompress -c "${file}" > "${target_dir}/${basename_without_ext}"
+            ;;
+        *)
+            log_error "Unsupported file format: '${file}'"
+            return 1
+            ;;
     esac
-    echo "Done extracting '$FILE'."
-done
+
+    if [[ $? -eq 0 ]]; then
+        log_info "Successfully extracted '${file}'"
+        return 0
+    else
+        log_error "Failed to extract '${file}'"
+        return 1
+    fi
+}
+
+# Main function
+main() {
+    local target_dir="${DEFAULT_TARGET_DIR}"
+    local failed_extractions=0
+    local total_extractions=0
+
+    # Reset OPTIND for proper argument parsing
+    OPTIND=1
+
+    # Parse command line arguments
+    while getopts "hd:vn" option; do
+        case "${option}" in
+            h)
+                usage
+                exit 0
+                ;;
+            d)
+                target_dir="${OPTARG}"
+                ;;
+            v)
+                VERBOSE=1
+                ;;
+            n)
+                DRY_RUN=1
+                ;;
+            *)
+                log_error "Invalid option. Use -h for help."
+                exit 1
+                ;;
+        esac
+    done
+
+    # Shift parsed options to process file arguments
+    shift $((OPTIND - 1))
+
+    # Validate we have files to process
+    if [[ $# -eq 0 ]]; then
+        log_error "No archive files specified."
+        usage
+        exit 1
+    fi
+
+    # Validate target directory
+    if ! validate_target_directory "${target_dir}"; then
+        exit 1
+    fi
+
+    # Check dependencies
+    check_dependencies
+
+    # Process each file
+    for file in "$@"; do
+        total_extractions=$((total_extractions + 1))
+
+        if ! extract_file "${file}" "${target_dir}"; then
+            failed_extractions=$((failed_extractions + 1))
+            continue
+        fi
+    done
+
+    # Summary
+    local successful_extractions=$((total_extractions - failed_extractions))
+    log_info "Extraction complete: ${successful_extractions}/${total_extractions} files processed successfully."
+
+    # Exit with appropriate code
+    if [[ ${failed_extractions} -gt 0 ]]; then
+        exit 1
+    else
+        exit 0
+    fi
+}
+
+# Run main function if script is executed directly
+[[ "${BASH_SOURCE[0]}" == "${0}" ]] && main "$@"
