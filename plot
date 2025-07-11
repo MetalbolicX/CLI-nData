@@ -1,32 +1,4 @@
 #!/usr/bin/env bash
-
-# Define the virtual environment directory
-VENV_DIR="$HOME/cli-ndata/utils/venv"
-SCRIPT_PATH="$HOME/cli-ndata/utils/plot.py"
-REQUIREMENTS_PATH="$HOME/cli-ndata/utils/requirements.txt"
-
-# --- Automatic Virtual Environment Management ---
-
-# Check if the virtual environment exists
-if [ ! -d "$VENV_DIR" ]; then
-    echo "Creating virtual environment at $VENV_DIR..."
-    python3 -m venv "$VENV_DIR" || { echo "Error: Failed to create virtual environment."; exit 1; }
-fi
-
-# Activate the virtual environment
-source "$VENV_DIR/bin/activate" || { echo "Error: Failed to activate virtual environment."; exit 1; }
-
-# Install dependencies if requirements.txt is newer than a marker file
-# This prevents reinstalling every time
-INSTALL_MARKER="$VENV_DIR/.install_complete"
-if [ "$REQUIREMENTS_PATH" -nt "$INSTALL_MARKER" ]; then
-    echo "Installing/Updating dependencies in virtual environment..."
-    pip install -r "$REQUIREMENTS_PATH" || { echo "Error: Failed to install dependencies."; deactivate; exit 1; }
-    touch "$INSTALL_MARKER"
-fi
-
-# --- Execute the plot script ---
-python3 "$SCRIPT_PATH" "$@"
-
-# --- Deactivate the virtual environment ---
-deactivate
+# Updated plot script
+readonly UTILS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/utils"
+exec "$UTILS_DIR/python-runner" "plot" "$@"

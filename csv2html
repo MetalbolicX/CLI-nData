@@ -1,4 +1,4 @@
 #!/usr/bin/env bash
-# Updated scrape script
+# Updated csv2html script
 readonly UTILS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/utils"
-exec "$UTILS_DIR/python-runner" "scrape" "$@"
+exec "$UTILS_DIR/python-runner" "csv2html" "$@"
