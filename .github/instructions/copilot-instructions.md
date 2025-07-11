@@ -5,6 +5,10 @@ description: General guidelines and best practices for writing code.
 
 # Genral Guidelines for Writing Code
 
+## Project Objective
+
+I objective of the library is to provide a set of utilities that can be used in data wrangling, data visualization, and other data-related tasks, just using command line interface (CLI) commands.
+
 ## General Guidelines
 
 - Always verify information before presenting it. Do not make assumptions or speculate without clear evidence.
