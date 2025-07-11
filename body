@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+set -euo pipefail
+
+readonly PROGNAME=$(basename "$0")
+
 : 'body: apply expression to all but the first line.
 Use multiple times in case the header spans more than one line.
 
@@ -12,26 +16,52 @@ From: https://unix.stackexchange.com/a/11859
 
 See also: header (https://github.com/jeroenjanssens/dsutils)'
 
-IFS= read -r header
-printf '%s\n' "$header"
-"$@"#!/usr/bin/env bash
-
-# Read the first line (header)
-if ! IFS= read -r header; then
-    echo "Error: Input is empty or invalid." >&2
-    exit 1
-fi
-
-# Print the header
-printf '%s\n' "$header"
-
-# Execute the provided command on the remaining lines
-if [[ $# -eq 0 ]]; then
-    echo "Error: No command provided to process the body." >&2
-    exit 1
-fi
-
-"$@" || {
-    echo "Error: Command failed." >&2
-    exit 1
+# Read and process the header line
+read_header() {
+    local header
+    if ! IFS= read -r header; then
+        echo "Error: Input is empty or invalid." >&2
+        return 1
+    fi
+    printf '%s\n' "$header"
+    return 0
 }
+
+# Validate that at least one command argument is provided
+validate_command_args() {
+    if [[ $# -eq 0 ]]; then
+        echo "Error: No command provided to process the body." >&2
+        echo "Usage: $PROGNAME <command> [args...]" >&2
+        return 1
+    fi
+    return 0
+}
+
+# Execute the provided command on the remaining input lines
+execute_body_command() {
+    "$@" || {
+        echo "Error: Command '$*' failed with exit code $?." >&2
+        return 1
+    }
+}
+
+# Main function that orchestrates the body processing
+main() {
+    # Validate command line arguments
+    if ! validate_command_args "$@"; then
+        exit 1
+    fi
+
+    # Read and print the header
+    if ! read_header; then
+        exit 1
+    fi
+
+    # Execute the command on the remaining lines
+    if ! execute_body_command "$@"; then
+        exit 1
+    fi
+}
+
+# Only run main if script is executed directly (not sourced)
+[[ "${BASH_SOURCE[0]}" == "${0}" ]] && main "$@"
