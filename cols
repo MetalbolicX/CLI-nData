@@ -1,58 +1,256 @@
 #!/usr/bin/env bash
-# cols: apply a command to a subset of the columns and merge back with the remaining columns.
-#
-# Assumes that the input data is comma-delimited and that it has a header.
-# Depends on csvcut, which is part of csvkit: http://csvkit.readthedocs.org
-#
-# Example usage 1: reverse sort column 'a'
-# $ echo 'a,b\n1,2\n3,4\n5,6' | cols -c a body sort -nr
-#
-# Example usage 2: apply PCA (using tapkee) to all numerical features (-C selects all but the specified columns) of the Iris data set:
-# $ < iris.csv cols -C species body tapkee --method pca | header -r x,y,species
-#
-# See also: header and body (https://github.com/jeroenjanssens/command-line-tools-for-data-science)
-#
-# Author: http://jeroenjanssens.com
+: 'cols: apply a command to a subset of the columns and merge back with the remaining columns.
 
-# Validate input arguments
-if [[ $# -lt 3 ]]; then
-    echo "Error: Missing arguments. Usage: cols <arg> <columns> <command>" >&2
-    exit 1
-fi
+Assumes that the input data is comma-delimited and that it has a header.
+Depends on csvcut, which is part of csvkit: http://csvkit.readthedocs.org
 
-ARG="$1"
-ARG_INV="$(tr cC Cc <<< "${ARG}")"
-shift
-COLUMNS="$1"
-shift
-EXPR="$@"
+Example usage 1: reverse sort column 'a'
+$ echo 'a,b\n1,2\n3,4\n5,6' | cols -c a body sort -nr
 
-# Check for required dependencies
-if ! command -v csvcut &> /dev/null; then
-    echo "Error: csvcut is not installed. Please install csvkit." >&2
-    exit 1
-fi
+Example usage 2: apply PCA (using tapkee) to all numerical features (-C selects all but the specified columns) of the Iris data set:
+$ < iris.csv cols -C species body tapkee --method pca | header -r x,y,species
 
-if ! command -v paste &> /dev/null; then
-    echo "Error: paste is not installed." >&2
-    exit 1
-fi
+See also: header and body (https://github.com/jeroenjanssens/command-line-tools-for-data-science)
 
-# Handle temporary file creation
-if [ -z "$TMPDIR" ]; then
-    TMPDIR=/tmp
-fi
+Author: http://jeroenjanssens.com'
 
-OTHER_COLUMNS=$(mktemp "${TMPDIR}/cols-XXXXXXXX") || {
-    echo "Error: Failed to create temporary file." >&2
-    exit 1
+set -eo pipefail
+
+# Global variables
+readonly PROGNAME="$(basename "$0")"
+readonly PROGDIR="$(readlink -m "$(dirname "$0")")"
+readonly REQUIRED_DEPS=("csvcut" "paste" "tee" "mktemp")
+
+# Temporary file for cleanup
+TEMP_FILE=""
+
+# Display usage information
+usage() {
+    cat << EOF
+Usage: $PROGNAME [OPTIONS] <column_arg> <columns> <command>
+
+Apply a command to a subset of CSV columns and merge back with remaining columns.
+
+ARGUMENTS:
+    column_arg    Column selection argument (-c or -C)
+                  -c: select specified columns
+                  -C: select all columns except specified ones
+    columns       Column names or numbers to select/exclude
+    command       Command to apply to the selected columns
+
+OPTIONS:
+    -h, --help    Show this help message and exit
+
+EXAMPLES:
+    # Reverse sort column 'a'
+    echo 'a,b\n1,2\n3,4\n5,6' | $PROGNAME -c a body sort -nr
+
+    # Apply PCA to all numerical features except 'species'
+    < iris.csv $PROGNAME -C species body tapkee --method pca | header -r x,y,species
+
+DEPENDENCIES:
+    This script requires csvkit (for csvcut) and standard Unix utilities.
+    Install csvkit: pip install csvkit
+
+EOF
 }
 
-# Cleanup temporary file on exit
-finish() {
-    rm -f "$OTHER_COLUMNS"
+# Clean up temporary files
+cleanup() {
+    if [[ -n "$TEMP_FILE" && -f "$TEMP_FILE" ]]; then
+        rm -f "$TEMP_FILE"
+    fi
 }
-trap finish EXIT
 
-# Process columns and execute the command
-tee "$OTHER_COLUMNS" | csvcut "$ARG" "$COLUMNS" | eval "${EXPR}" | paste -d, - <(csvcut "$ARG_INV" "$COLUMNS" "$OTHER_COLUMNS")
+# Set up cleanup trap
+setup_cleanup() {
+    trap cleanup EXIT INT TERM
+}
+
+# Check if all required dependencies are available
+check_dependencies() {
+    local missing_deps=()
+    local dep
+
+    for dep in "${REQUIRED_DEPS[@]}"; do
+        if ! command -v "$dep" &> /dev/null; then
+            missing_deps+=("$dep")
+        fi
+    done
+
+    if [[ ${#missing_deps[@]} -gt 0 ]]; then
+        echo "Error: Missing required dependencies: ${missing_deps[*]}" >&2
+        echo "Please install the missing tools:" >&2
+        echo "  - csvcut: pip install csvkit" >&2
+        echo "  - Other tools are usually available in standard Unix distributions" >&2
+        return 1
+    fi
+
+    return 0
+}
+
+# Validate command line arguments
+validate_arguments() {
+    local arg_count=$1
+
+    if [[ $arg_count -lt 3 ]]; then
+        echo "Error: Missing arguments." >&2
+        echo "Usage: $PROGNAME <column_arg> <columns> <command>" >&2
+        echo "Use '$PROGNAME --help' for more information." >&2
+        return 1
+    fi
+
+    return 0
+}
+
+# Validate column argument format
+validate_column_arg() {
+    local column_arg="$1"
+
+    if [[ "$column_arg" != "-c" && "$column_arg" != "-C" ]]; then
+        echo "Error: Invalid column argument '$column_arg'. Must be '-c' or '-C'." >&2
+        return 1
+    fi
+
+    return 0
+}
+
+# Create secure temporary file
+create_temp_file() {
+    local tmpdir="${TMPDIR:-/tmp}"
+
+    # Ensure tmpdir exists and is writable
+    if [[ ! -d "$tmpdir" ]]; then
+        echo "Error: Temporary directory '$tmpdir' does not exist." >&2
+        return 1
+    fi
+
+    if [[ ! -w "$tmpdir" ]]; then
+        echo "Error: Temporary directory '$tmpdir' is not writable." >&2
+        return 1
+    fi
+
+    # Create temporary file with restrictive permissions
+    TEMP_FILE="$(mktemp "$tmpdir/cols-XXXXXXXX")" || {
+        echo "Error: Failed to create temporary file in '$tmpdir'." >&2
+        return 1
+    }
+
+    # Set restrictive permissions
+    chmod 600 "$TEMP_FILE" || {
+        echo "Error: Failed to set permissions on temporary file." >&2
+        return 1
+    }
+
+    return 0
+}
+
+# Validate command expression for basic safety
+validate_command() {
+    local command_expr="$1"
+
+    # Check for obviously dangerous patterns
+    if [[ "$command_expr" =~ (rm[[:space:]]|>|>>|&|;|\|) ]]; then
+        echo "Warning: Command contains potentially dangerous operators." >&2
+        echo "Command: $command_expr" >&2
+        echo "Please review the command carefully." >&2
+    fi
+
+    # Check if command is not empty
+    if [[ -z "$command_expr" ]]; then
+        echo "Error: Command expression cannot be empty." >&2
+        return 1
+    fi
+
+    return 0
+}
+
+# Process CSV columns with the specified command
+process_columns() {
+    local column_arg="$1"
+    local columns="$2"
+    local command_expr="$3"
+    local inverse_arg
+
+    # Generate inverse argument
+    inverse_arg="$(tr cC Cc <<< "$column_arg")"
+
+    # Validate inputs
+    if ! validate_command "$command_expr"; then
+        return 1
+    fi
+
+    # Process the data through the pipeline
+    # Split the data: save all data to temp file, process selected columns
+    if ! tee "$TEMP_FILE" | csvcut "$column_arg" "$columns" | eval "$command_expr" | paste -d, - <(csvcut "$inverse_arg" "$columns" "$TEMP_FILE"); then
+        echo "Error: Failed to process columns. Check your command and column specifications." >&2
+        return 1
+    fi
+
+    return 0
+}
+
+# Parse command line arguments
+parse_arguments() {
+    local column_arg="$1"
+    local columns="$2"
+    shift 2
+    local command_expr="$*"
+
+    # Validate column argument
+    if ! validate_column_arg "$column_arg"; then
+        return 1
+    fi
+
+    # Validate columns specification
+    if [[ -z "$columns" ]]; then
+        echo "Error: Column specification cannot be empty." >&2
+        return 1
+    fi
+
+    # Process the columns
+    if ! process_columns "$column_arg" "$columns" "$command_expr"; then
+        return 1
+    fi
+
+    return 0
+}
+
+# Main function
+main() {
+    local args=("$@")
+
+    # Handle help flag
+    if [[ "$1" == "-h" || "$1" == "--help" ]]; then
+        usage
+        exit 0
+    fi
+
+    # Validate argument count
+    if ! validate_arguments $#; then
+        exit 1
+    fi
+
+    # Check dependencies
+    if ! check_dependencies; then
+        exit 1
+    fi
+
+    # Set up cleanup
+    setup_cleanup
+
+    # Create temporary file
+    if ! create_temp_file; then
+        exit 1
+    fi
+
+    # Parse arguments and process
+    if ! parse_arguments "${args[@]}"; then
+        exit 1
+    fi
+
+    return 0
+}
+
+# Only run main if script is executed directly
+[[ "${BASH_SOURCE[0]}" == "${0}" ]] && main "$@"
