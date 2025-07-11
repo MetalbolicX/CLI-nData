@@ -1,5 +1,5 @@
 ---
-applyTo: "**/*.sh", "**/*.bash"
+applyTo: "**/*.sh, **/*.bash"
 description: General guide lines to write bash code.
 ---
 
