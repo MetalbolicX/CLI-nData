@@ -1,24 +1,35 @@
 #!/usr/bin/env bash
-# header: add, replace, and delete header lines.
-#
-# Example usage:
-# $ seq 10 | header -a 'values'
-# $ seq 10 | header -a 'VALUES' | header -e 'tr "[:upper:]" "[:lower:]"'
-# $ seq 10 | header -a 'values' | header -d
-# $ seq 10 | header -a 'multi\nline' | header -n 2 -e "paste -sd_"
-#
-# See also: body (https://github.com/jeroenjanssens/command-line-tools-for-data-science)
-#
-# Author: http://jeroenjanssens.com
+: 'header: add, replace, and delete header lines.
 
-usage () {
-cat << EOF
+Example usage:
+$ seq 10 | header -a 'values'
+$ seq 10 | header -a 'VALUES' | header -e 'tr "[:upper:]" "[:lower:]"'
+$ seq 10 | header -a 'values' | header -d
+$ seq 10 | header -a 'multi\nline' | header -n 2 -e "paste -sd_"
+
+See also: body (https://github.com/jeroenjanssens/command-line-tools-for-data-science)
+Author: http://jeroenjanssens.com'
+
+set -euo pipefail
+
+# Global constants
+readonly PROGNAME=$(basename "$0")
+readonly DEFAULT_NUMROWS=1
+
+# Global variables (to be set by command line parsing)
+NUMROWS=${DEFAULT_NUMROWS}
+OLD_HEADER=""
+ACTION=""
+ACTION_ARG=""
+
+show_usage() {
+    cat << EOF
 header: add, replace, and delete header lines.
 
-usage: header OPTIONS
+usage: ${PROGNAME} OPTIONS
 
 OPTIONS:
-  -n      Number of lines to consider as header [default: 1]
+  -n      Number of lines to consider as header [default: ${DEFAULT_NUMROWS}]
   -a      Add header
   -r      Replace header
   -e      Apply expression to header
@@ -35,77 +46,238 @@ See also: body
 EOF
 }
 
-validate_numrows () {
-    if ! [[ "$NUMROWS" =~ ^[0-9]+$ ]] || [[ "$NUMROWS" -le 0 ]]; then
-        echo "Error: -n requires a positive integer." >&2
+validate_numrows() {
+    local numrows="$1"
+
+    if ! [[ "$numrows" =~ ^[0-9]+$ ]] || [[ "$numrows" -le 0 ]]; then
+        echo "Error: -n requires a positive integer, got: '$numrows'" >&2
+        return 1
+    fi
+
+    return 0
+}
+
+validate_expression() {
+    local expr="$1"
+
+    if [[ -z "$expr" ]]; then
+        echo "Error: -e requires a non-empty expression." >&2
+        return 1
+    fi
+
+    # Basic validation to prevent obvious injection attempts
+    if [[ "$expr" =~ (\$\(|\`|;|&&|\|\||\||&) ]]; then
+        echo "Error: Expression contains potentially unsafe characters." >&2
+        echo "Hint: Use simple commands like 'tr', 'sed', 'awk', etc." >&2
+        return 1
+    fi
+
+    return 0
+}
+
+read_header_lines() {
+    local numrows="$1"
+    local header=""
+    local line=""
+    local i
+
+    for i in $(seq "$numrows"); do
+        if ! IFS= read -r line; then
+            if [[ "$i" -eq 1 ]]; then
+                echo "Error: Input is empty or no data available." >&2
+                return 1
+            else
+                echo "Warning: Only $((i-1)) lines available, expected $numrows." >&2
+                break
+            fi
+        fi
+        header="${header}${line}\n"
+    done
+
+    OLD_HEADER="$header"
+    return 0
+}
+
+print_header() {
+    local header="$1"
+    echo -ne "$header"
+}
+
+print_body() {
+    cat
+}
+
+add_header() {
+    local new_header="$1"
+
+    print_header "${new_header}\n"
+    print_body
+}
+
+replace_header() {
+    local new_header="$1"
+
+    if ! read_header_lines "$NUMROWS"; then
+        return 1
+    fi
+
+    print_header "${new_header}\n"
+    print_body
+}
+
+delete_header() {
+    if ! read_header_lines "$NUMROWS"; then
+        return 1
+    fi
+
+    print_body
+}
+
+apply_expression() {
+    local expr="$1"
+    local processed_header=""
+
+    if ! validate_expression "$expr"; then
+        return 1
+    fi
+
+    if ! read_header_lines "$NUMROWS"; then
+        return 1
+    fi
+
+    # Use a safer approach than eval by creating a temporary script
+    local temp_script
+    temp_script=$(mktemp)
+
+    # Cleanup temp file on exit
+    trap 'rm -f "$temp_script"' EXIT
+
+    # Write the expression to the temp script
+    echo "#!/bin/bash" > "$temp_script"
+    echo "set -euo pipefail" >> "$temp_script"
+    echo "$expr" >> "$temp_script"
+
+    # Make it executable
+    chmod +x "$temp_script"
+
+    # Apply the expression to the header
+    if processed_header=$(echo -ne "$OLD_HEADER" | "$temp_script" 2>&1); then
+        print_header "${processed_header}\n"
+        print_body
+    else
+        echo "Error: Failed to apply expression '$expr'" >&2
+        echo "Expression output: $processed_header" >&2
+        return 1
+    fi
+}
+
+print_default_header() {
+    if ! read_header_lines "$NUMROWS"; then
+        return 1
+    fi
+
+    print_header "$OLD_HEADER"
+}
+
+parse_command_line() {
+    local option_count=0
+
+    while getopts "dn:ha:r:e:" OPTION; do
+        case $OPTION in
+            n)
+                if ! validate_numrows "$OPTARG"; then
+                    return 1
+                fi
+                NUMROWS="$OPTARG"
+                ;;
+            a)
+                if [[ "$option_count" -gt 0 ]]; then
+                    echo "Error: Only one action option (-a, -r, -e, -d) allowed." >&2
+                    return 1
+                fi
+                ACTION="add"
+                ACTION_ARG="$OPTARG"
+                ((option_count++))
+                ;;
+            r)
+                if [[ "$option_count" -gt 0 ]]; then
+                    echo "Error: Only one action option (-a, -r, -e, -d) allowed." >&2
+                    return 1
+                fi
+                ACTION="replace"
+                ACTION_ARG="$OPTARG"
+                ((option_count++))
+                ;;
+            e)
+                if [[ "$option_count" -gt 0 ]]; then
+                    echo "Error: Only one action option (-a, -r, -e, -d) allowed." >&2
+                    return 1
+                fi
+                ACTION="expression"
+                ACTION_ARG="$OPTARG"
+                ((option_count++))
+                ;;
+            d)
+                if [[ "$option_count" -gt 0 ]]; then
+                    echo "Error: Only one action option (-a, -r, -e, -d) allowed." >&2
+                    return 1
+                fi
+                ACTION="delete"
+                ((option_count++))
+                ;;
+            h)
+                show_usage
+                exit 0
+                ;;
+            *)
+                echo "Error: Invalid option." >&2
+                show_usage >&2
+                return 1
+                ;;
+        esac
+    done
+
+    return 0
+}
+
+execute_action() {
+    case "$ACTION" in
+        "add")
+            add_header "$ACTION_ARG"
+            ;;
+        "replace")
+            replace_header "$ACTION_ARG"
+            ;;
+        "expression")
+            apply_expression "$ACTION_ARG"
+            ;;
+        "delete")
+            delete_header
+            ;;
+        "")
+            # No action specified, print header as-is
+            print_default_header
+            ;;
+        *)
+            echo "Error: Unknown action '$ACTION'" >&2
+            return 1
+            ;;
+    esac
+}
+
+main() {
+    # Parse command line arguments
+    if ! parse_command_line "$@"; then
+        exit 1
+    fi
+
+    # Execute the requested action
+    if ! execute_action; then
         exit 1
     fi
 }
 
-get_header () {
-    for i in $(seq "$NUMROWS"); do
-        if ! IFS= read -r LINE; then
-            echo "Error: Input is empty or invalid." >&2
-            exit 1
-        fi
-        OLDHEADER="${OLDHEADER}${LINE}\n"
-    done
-}
-
-print_header () {
-    echo -ne "$1"
-}
-
-print_body () {
-    cat
-}
-
-OLDHEADER=
-NUMROWS=1
-
-while getopts "dn:ha:r:e:" OPTION; do
-    case $OPTION in
-        n)
-            NUMROWS=$OPTARG
-            validate_numrows
-            ;;
-        a)
-            print_header "$OPTARG\n"
-            print_body
-            exit 0
-            ;;
-        d)
-            get_header
-            print_body
-            exit 0
-            ;;
-        r)
-            get_header
-            print_header "$OPTARG\n"
-            print_body
-            exit 0
-            ;;
-        e)
-            get_header
-            if [[ -z "$OPTARG" ]]; then
-                echo "Error: -e requires an expression." >&2
-                exit 1
-            fi
-            print_header "$(echo -ne "$OLDHEADER" | eval "$OPTARG")\n"
-            print_body
-            exit 0
-            ;;
-        h)
-            usage
-            exit 0
-            ;;
-        *)
-            echo "Error: Invalid option." >&2
-            usage
-            exit 1
-            ;;
-    esac
-done
-
-get_header
-print_header "${OLDHEADER}"
+# Run main function only if script is executed directly
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    main "$@"
+fi
