@@ -12,6 +12,7 @@ description: This document provides guidelines for Python code.
 - Always add types to the first declaration of a variable and the function parameters and return types.
 - Use the `if __name__ == "__main__":` construct to allow or prevent parts of code from being run when the modules are imported.
 - When a variable is assignated for the first time, add the type hint to the variable declaration. For example, `my_var: int = 0`.
+- When the Python version is 3.8 or higher, use the `match` statement for pattern matching instead of `if-elif-else` chains.
 
 ## Arryas and Dictionaries
 

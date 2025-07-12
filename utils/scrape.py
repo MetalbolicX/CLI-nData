@@ -134,18 +134,19 @@ def convert_selectors_to_xpath(selectors: List[str]) -> List[str]:
     xpath_expressions: List[str] = []
 
     for selector in selectors:
-        if is_xpath_selector(selector):
-            xpath_expressions.append(selector)
-        else:
-            if not HAS_CSSSELECT:
+        match selector:
+            case _ if is_xpath_selector(selector):
+                xpath_expressions.append(selector)
+            case _ if not HAS_CSSSELECT:
                 print(f"Error: CSS selector '{selector}' provided but cssselect library is not installed.", file=sys.stderr)
                 print("Install cssselect with: pip install cssselect", file=sys.stderr)
                 sys.exit(ERROR_EXIT_CODE)
-            try:
-                xpath_expressions.append(GenericTranslator().css_to_xpath(selector))
-            except Exception as e:
-                print(f"Error: Invalid CSS selector '{selector}': {e}", file=sys.stderr)
-                sys.exit(ERROR_EXIT_CODE)
+            case _:
+                try:
+                    xpath_expressions.append(GenericTranslator().css_to_xpath(selector))
+                except Exception as e:
+                    print(f"Error: Invalid CSS selector '{selector}': {e}", file=sys.stderr)
+                    sys.exit(ERROR_EXIT_CODE)
 
     return xpath_expressions
 
