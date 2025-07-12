@@ -34,7 +34,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
     </td>
     <td align="center">
       <a href="https://www.python.org/psf-landing/" target="_blank">
-        <img src="https://s3.dualstack.us-east-2.amazonaws.com/pythondotorg-assets/media/files/python-logo-only.svg" alt="ReScript" width="42" height="42" /><br/>
+        <img src="https://s3.dualstack.us-east-2.amazonaws.com/pythondotorg-assets/media/files/python-logo-only.svg" alt="Python" width="42" height="42" /><br/>
         <b>Python</b><br/>
       </a>
     </td>
