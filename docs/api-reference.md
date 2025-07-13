@@ -411,9 +411,9 @@ scrape -f input.html -e 'h1'
 scrape -e 'h1' -e 'h2' -e 'h3' -f page.html
 ```
 
-?>
-**CSS Selectors**: If a selector is provided, it is automatically converted to XPath using `cssselect`.
-**XPath Queries**: XPath expressions can be used directly by prefixing them with `//`.
+> [!Tip]
+> - CSS Selectors: If a selector is provided, it is automatically converted to XPath using `cssselect`.
+> - XPath Queries: XPath expressions can be used directly by prefixing them with `//`.
 
 ## `httpservedir`
 
@@ -477,7 +477,8 @@ httpservedir 8000 /not/a/real/dir
 ```
 Output: Error message about missing directory.
 
-?> When specifying a directory, you must also specify the port. The script will exit with an error if the port or directory is invalid.
+> [!Warning]
+> When specifying a directory, you must also specify the port. The script will exit with an error if the port or directory is invalid.
 
 ## `plot`
 

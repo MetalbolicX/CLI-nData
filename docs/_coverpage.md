@@ -1,8 +1,8 @@
-![logo](_media/logo.svg)
+![logo](_media/cli-ndata-logo.svg)
 
-> Lorem ipsum, dolor sit amet consectetur adipisicing elit. Laborum, dolores optio. Voluptates minima tempora ab perspiciatis! Voluptate, blanditiis. Illo, repellat. Quo nam ex, voluptatem voluptatum quia perferendis est explicabo at?
+> Wrangle your data without leaving the terminal.
 
-![ReScript version](https://img.shields.io/badge/ReScript-%3E%3D11.0.0-blue)
+![Python version](https://img.shields.io/badge/Python-%3E%3D3.12.0-blue)
 
 [Getting Started](/getting-started)
 [API Reference](/api-reference)

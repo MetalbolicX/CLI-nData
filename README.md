@@ -1,5 +1,9 @@
 # CLI-nData
 
+<div align="center">
+  <img src="./docs/_media/cli-ndata-logo.svg" alt="CLI-nData Logo" width="200" />
+</div>
+
 > CLI-nData is the short name of Clean data. It is command line tools to process data from the Linux terminal. If you are a data scientists or data engineer, you can use it to process data in the terminal.
 
 **Supported Versions:**

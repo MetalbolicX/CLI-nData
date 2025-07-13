@@ -1,3 +1,5 @@
+"uase strict";
+
 window.$docsify = {
   name: "cli-ndata",
   repo: "https://github.com/MetalbolicX/cli-ndata.git",
@@ -17,5 +19,8 @@ window.$docsify = {
     placeholder: "Search...",
     depth: 2,
     maxAge: 86400000, // 1 day
+  },
+  "flexible-alerts": {
+    style: "flat",
   },
 };

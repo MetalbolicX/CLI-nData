@@ -10,7 +10,12 @@ python3 --version
 
 If Python is not installed, download it from [python.org](https://www.python.org/downloads/).
 
-!> Make sure to have `pip` installed, which is the package installer for Python.
+> [!Warning]
+> Make sure to have `pip` installed, which is the package installer for Python. You can check if `pip` is installed by running:
+
+```sh
+pip --version
+```
 
 ## Installation
 
