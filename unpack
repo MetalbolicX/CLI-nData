@@ -19,6 +19,7 @@ readonly SUPPORTED_FORMATS=".7z, .tar.bz2, .bz2, .deb, .tar.gz, .gz, .tar, .tbz2
 DEFAULT_TARGET_DIR="$(pwd)"
 VERBOSE=0
 DRY_RUN=0
+CREATE_DIR=0
 
 # Required programs and their corresponding formats
 declare -A REQUIRED_PROGRAMS=(
@@ -35,13 +36,14 @@ declare -A REQUIRED_PROGRAMS=(
 # Usage function
 usage() {
     cat << EOF
-Usage: ${PROGNAME} [-h] [-d TARGET_DIR] [-v] [-n] <archive> [archive2 ...]
+Usage: ${PROGNAME} [-h] [-d TARGET_DIR] [-c NEW_DIR] [-v] [-n] <archive> [archive2 ...]
 
 Extract common file formats to a target directory.
 
 Options:
     -h              Show this help message
     -d TARGET_DIR   Target directory for extraction (default: current directory)
+    -c NEW_DIR      Create new directory and extract content inside it
     -v              Verbose output
     -n              Dry run - show what would be done without executing
 
@@ -72,6 +74,28 @@ log_info() {
 command_exists() {
     local cmd="$1"
     command -v "${cmd}" &> /dev/null
+}
+
+# Create directory if it doesn't exist
+create_directory() {
+    local dir_path="$1"
+
+    if [[ "${DRY_RUN}" -eq 1 ]]; then
+        echo "Would create directory: ${dir_path}"
+        return 0
+    fi
+
+    if [[ ! -d "${dir_path}" ]]; then
+        log_info "Creating directory '${dir_path}'"
+        if ! mkdir -p "${dir_path}"; then
+            log_error "Failed to create directory '${dir_path}'"
+            return 1
+        fi
+    else
+        log_info "Directory '${dir_path}' already exists"
+    fi
+
+    return 0
 }
 
 # Validate target directory
@@ -281,7 +305,7 @@ main() {
     OPTIND=1
 
     # Parse command line arguments
-    while getopts "hd:vn" option; do
+    while getopts "hd:c:vn" option; do
         case "${option}" in
             h)
                 usage
@@ -289,6 +313,10 @@ main() {
                 ;;
             d)
                 target_dir="${OPTARG}"
+                ;;
+            c)
+                target_dir="${OPTARG}"
+                CREATE_DIR=1
                 ;;
             v)
                 VERBOSE=1
@@ -311,6 +339,13 @@ main() {
         log_error "No archive files specified."
         usage
         exit 1
+    fi
+
+    # Create directory if requested
+    if [[ "${CREATE_DIR}" -eq 1 ]]; then
+        if ! create_directory "${target_dir}"; then
+            exit 1
+        fi
     fi
 
     # Validate target directory
