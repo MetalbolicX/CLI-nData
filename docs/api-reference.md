@@ -607,7 +607,7 @@ This command extracts common archive file formats to a target directory. It supp
 ### Usage
 
 ```sh
-unpack [-h] [-d TARGET_DIR] [-v] [-n] <archive> [archive2 ...]
+unpack [-h] [-d TARGET_DIR] [-c NEW_DIR] [-v] [-n] <archive> [archive2 ...]
 ```
 
 ### Arguments
@@ -618,6 +618,7 @@ unpack [-h] [-d TARGET_DIR] [-v] [-n] <archive> [archive2 ...]
 
 - `-h`: Show help message
 - `-d TARGET_DIR`: Target directory for extraction (default: current directory)
+- `-c NEW_DIR`: Create new directory and extract content inside it
 - `-v`: Verbose output (shows info messages)
 - `-n`: Dry run (shows what would be done without executing)
 
@@ -625,6 +626,7 @@ unpack [-h] [-d TARGET_DIR] [-v] [-n] <archive> [archive2 ...]
 
 - Supports batch extraction of multiple files
 - Automatically detects and extracts supported formats
+- Creates new directories for extraction when needed
 - Validates files and target directory before extraction
 - Checks for required dependencies and warns if missing
 - Verbose and dry-run modes for safe operation
@@ -648,6 +650,12 @@ unpack archive.zip
 unpack -d /tmp/extracted archive1.tar.gz archive2.zip
 ```
 
+#### Create a new directory and extract content inside it
+
+```sh
+unpack -c extracted_files archive.tar.gz
+```
+
 #### Show what would be done (dry run)
 
 ```sh
@@ -658,5 +666,11 @@ unpack -n archive.tar.bz2
 
 ```sh
 unpack -v archive.rar
+```
+
+#### Create directory with verbose output
+
+```sh
+unpack -c my_archive -v archive.zip
 ```
 
