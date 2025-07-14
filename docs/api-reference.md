@@ -673,4 +673,3 @@ unpack -v archive.rar
 ```sh
 unpack -c my_archive -v archive.zip
 ```
-
