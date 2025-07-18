@@ -1,4 +1,4 @@
-#!/usr/bin/env -S deno run --allow-env
+#!/usr/bin/env -S deno run --allow-env --allow-write
 
 import { parseArgs } from "@std/cli";
 import { readAll } from "@std/io";
@@ -7,26 +7,39 @@ import xPathToCss from "xpath-to-css";
 
 const VALID_OUTPUTS = ["stdout", "html", "json", "csv", "text"];
 const XPATH_PREFIX = "//";
+
 /** Parses the HTML input from either a file or stdin.
  * @param {Object} args - The command line arguments.
  * @returns {Promise<HTMLElement>} The parsed HTML root element.
  */
 const parseHTML = async (args) => {
-  if (typeof args.html === "string" && args.html.trim().length > 0) {
-    const root = parse(args.html);
-    return root;
+  // If --file is provided, read from file
+  if (typeof args.file === "string" && args.file.trim().length > 0) {
+    try {
+      const fileContent = await Deno.readTextFile(args.file);
+      if (!fileContent.trim()) {
+        console.error(`Error: File '${args.file}' is empty.`);
+        Deno.exit(1);
+      }
+      return parse(fileContent);
+    } catch (err) {
+      console.error(
+        `Error: Unable to read file '${args.file}'. ${err.message || err}`
+      );
+      Deno.exit(1);
+    }
   }
 
+  // Otherwise, read from stdin
   const buffer = await readAll(Deno.stdin);
   const input = new TextDecoder().decode(buffer).trim();
 
   if (!input) {
-    console.error("Error: No data provided via --data or stdin.");
+    console.error("Error: No data provided via --file, --html, or stdin.");
     Deno.exit(1);
   }
 
-  const root = parse(input);
-  return root;
+  return parse(input);
 };
 
 /**
@@ -42,28 +55,52 @@ Options:
     -e, --selector      Specify the selector to use for scraping.
     -f, --file          Specify the file to scrape.
     -x, --existance     Specify the existance check.
-    -r, --raw_input     Specify the raw input to scrape.
     -o, --output        Specify the output file (default: stdout).
     -t, --text          Specify to extract text content.
   `);
 
 const options = {
   boolean: ["help", "existance", "text"],
-  string: ["attribute", "selector", "file", "raw_input", "output"],
+  string: ["attribute", "selector", "file", "output"],
   alias: {
     h: "help",
     a: "attribute",
     e: "selector",
     f: "file",
     x: "existance",
-    r: "raw_input",
     o: "output",
     t: "text",
   },
 };
 
-// Case handlers as arrow functions
-const handleAttribute = (elements, attribute, selector) => {
+/** * Outputs the result to a file or stdout.
+ * @param {string} result - The result to output.
+ * @param {Object} args - The command line arguments.
+ * @returns {Promise<void>}
+ */
+const outputResult = async (result, args) => {
+  if (args.output) {
+    try {
+      await Deno.writeTextFile(args.output, result);
+    } catch (err) {
+      console.error(
+        `Error: Unable to write to file '${args.output}'. ${err.message || err}`
+      );
+      Deno.exit(1);
+    }
+  } else {
+    console.log(result);
+  }
+};
+
+/** * Handles the attribute scraping logic.
+ * @param {HTMLElement[]} elements - The elements to scrape.
+ * @param {string} attribute - The attribute to scrape.
+ * @param {string} selector - The selector used for scraping.
+ * @param {Object} args - The command line arguments.
+ * @returns {Promise<void>}
+ */
+const handleAttribute = async (elements, attribute, selector, args) => {
   const results = elements
     .map((el) => el.getAttribute(attribute))
     .filter(Boolean);
@@ -72,10 +109,16 @@ const handleAttribute = (elements, attribute, selector) => {
       `No attribute '${attribute}' found for selector: ${selector}`
     );
   }
-  console.log(results.join("\n"));
+  await outputResult(results.join("\n"), args);
 };
 
-const handleExistence = (elements, selector) => {
+/** * Handles the existence check logic.
+ * @param {HTMLElement[]} elements - The elements to check.
+ * @param {string} selector - The selector used for checking.
+ * @param {Object} args - The command line arguments.
+ * @returns {Promise<void>}
+ */
+const handleExistence = async (elements, selector, args) => {
   if (elements.length > 0) {
     Deno.exit(0);
   } else {
@@ -84,19 +127,31 @@ const handleExistence = (elements, selector) => {
   }
 };
 
-const handleText = (elements, selector) => {
+/** * Handles the text extraction logic.
+ * @param {HTMLElement[]} elements - The elements to extract text from.
+ * @param {string} selector - The selector used for scraping.
+ * @param {Object} args - The command line arguments.
+ * @returns {Promise<void>}
+ */
+const handleText = async (elements, selector, args) => {
   const results = elements.map((el) => el.textContent.trim());
   if (!results.length) {
     console.error(`No text content found for selector: ${selector}`);
   }
-  console.log(results.join("\n"));
+  await outputResult(results.join("\n"), args);
 };
 
-const handleDefault = (elements, selector) => {
+/** * Handles the default case when no specific action is specified.
+ * @param {HTMLElement[]} elements - The elements to handle.
+ * @param {string} selector - The selector used for scraping.
+ * @param {Object} args - The command line arguments.
+ * @returns {Promise<void>}
+ */
+const handleDefault = async (elements, selector, args) => {
   if (!elements.length) {
     console.error(`No elements found for selector: ${selector}`);
   }
-  console.log(elements.toString());
+  await outputResult(elements.toString(), args);
 };
 
 /**
@@ -125,13 +180,13 @@ const main = async () => {
 
   // Dispatch
   if (args.attribute) {
-    handleAttribute(elements, args.attribute, selector);
+    await handleAttribute(elements, args.attribute, selector, args);
   } else if (args.existance) {
-    handleExistence(elements, selector);
+    await handleExistence(elements, selector, args);
   } else if (args.text) {
-    handleText(elements, selector);
+    await handleText(elements, selector, args);
   } else {
-    handleDefault(elements, selector);
+    await handleDefault(elements, selector, args);
   }
 };
 
