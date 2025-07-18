@@ -53,7 +53,6 @@ Options:
     -h, --help          Show this help message
     -a, --attribute     Specify the attribute to scrape.
     -e, --selector      Specify the selector to use for scraping.
-    -f, --file          Specify the file to scrape.
     -x, --existance     Specify the existance check.
     -o, --output        Specify the output file (default: stdout).
     -t, --text          Specify to extract text content.
@@ -61,12 +60,11 @@ Options:
 
 const options = {
   boolean: ["help", "existance", "text"],
-  string: ["attribute", "selector", "file", "output"],
+  string: ["attribute", "selector", "output"],
   alias: {
     h: "help",
     a: "attribute",
     e: "selector",
-    f: "file",
     x: "existance",
     o: "output",
     t: "text",
