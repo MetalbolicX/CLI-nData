@@ -3,9 +3,10 @@
 import { parseArgs } from "@std/cli";
 import { readAll } from "@std/io";
 import { parse } from "node-html-parser";
+import xPathToCss from "xpath-to-css";
 
 const VALID_OUTPUTS = ["stdout", "html", "json", "csv", "text"];
-
+const XPATH_PREFIX = "//";
 /** Parses the HTML input from either a file or stdin.
  * @param {Object} args - The command line arguments.
  * @returns {Promise<HTMLElement>} The parsed HTML root element.
@@ -79,7 +80,11 @@ const main = async () => {
   }
 
   const root = await parseHTML(args);
-  const elements = root.removeWhitespace().querySelectorAll(args.selector);
+  const selector = args.selector.startsWith(XPATH_PREFIX)
+    ? xPathToCss(args.selector)
+    : args.selector;
+
+  const elements = root.removeWhitespace().querySelectorAll(selector);
 
   if (args.attribute) {
     const results = elements
