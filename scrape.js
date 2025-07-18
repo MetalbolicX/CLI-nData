@@ -62,6 +62,43 @@ const options = {
   },
 };
 
+// Case handlers as arrow functions
+const handleAttribute = (elements, attribute, selector) => {
+  const results = elements
+    .map((el) => el.getAttribute(attribute))
+    .filter(Boolean);
+  if (results.length === 0) {
+    console.error(
+      `No attribute '${attribute}' found for selector: ${selector}`
+    );
+  }
+  console.log(results.join("\n"));
+};
+
+const handleExistence = (elements, selector) => {
+  if (elements.length > 0) {
+    Deno.exit(0);
+  } else {
+    console.error("No elements found for selector: " + selector);
+    Deno.exit(1);
+  }
+};
+
+const handleText = (elements, selector) => {
+  const results = elements.map((el) => el.textContent.trim());
+  if (results.length === 0) {
+    console.error(`No text content found for selector: ${selector}`);
+  }
+  console.log(results.join("\n"));
+};
+
+const handleDefault = (elements, selector) => {
+  if (elements.length === 0) {
+    console.error(`No elements found for selector: ${selector}`);
+  }
+  console.log(elements.toString());
+};
+
 /**
  * Main function to parse arguments and render the chart.
  * @returns {void}
@@ -85,26 +122,16 @@ const main = async () => {
     : args.selector;
 
   const elements = root.removeWhitespace().querySelectorAll(selector);
-  console.log(args.output);
 
+  // Dispatch
   if (args.attribute) {
-    const results = elements
-      .map((el) => el.getAttribute(args.attribute))
-      .filter(Boolean);
-    console.log(results.join("\n"));
+    handleAttribute(elements, args.attribute, selector);
   } else if (args.existance) {
-    if (elements.length > 0) {
-      Deno.exit(0);
-    } else {
-      console.error("No elements found for selector: " + selector);
-      Deno.exit(1);
-    }
+    handleExistence(elements, selector);
   } else if (args.text) {
-    const results = elements.map((el) => el.textContent.trim());
-    console.log(results.join("\n"));
+    handleText(elements, selector);
   } else {
-    console.log("Last option");
-    console.log(elements.toString());
+    handleDefault(elements, selector);
   }
 };
 
