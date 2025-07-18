@@ -1,4 +1,4 @@
-#!/usr/bin/env -S deno run --allow-env --allow-write
+#!/usr/bin/env -S deno run -EW
 
 import { parseArgs } from "@std/cli";
 import { readAll } from "@std/io";
