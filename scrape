@@ -5,7 +5,6 @@ import { readAll } from "@std/io";
 import { parse } from "node-html-parser";
 import xPathToCss from "xpath-to-css";
 
-const VALID_OUTPUTS = ["stdout", "html", "json", "csv", "text"];
 const XPATH_PREFIX = "//";
 
 /** Parses the HTML input from either a file or stdin.
