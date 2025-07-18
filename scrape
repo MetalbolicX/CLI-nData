@@ -4,12 +4,13 @@ import { parseArgs } from "@std/cli";
 import { readAll } from "@std/io";
 import { parse } from "node-html-parser";
 
-/**
- * Retrieves and parses the data input for the chart.
- * @param args {Record<string, any>} The command-line arguments.
- * @returns {Promise<aObject[]>} The parsed data input.
+const VALID_OUTPUTS = ["stdout", "html", "json", "csv", "text"];
+
+/** Parses the HTML input from either a file or stdin.
+ * @param {Object} args - The command line arguments.
+ * @returns {Promise<HTMLElement>} The parsed HTML root element.
  */
-const getDataInput = async (args) => {
+const parseHTML = async (args) => {
   if (typeof args.html === "string" && args.html.trim().length > 0) {
     const root = parse(args.html);
     return root;
@@ -37,19 +38,18 @@ Usage: scrape [options]
 Options:
     -h, --help          Show this help message
     -a, --attribute     Specify the attribute to scrape.
-    -ht, --html         Specify the HTML element to scrape.
     -b, --body          Specify the body element to scrape.
     -e, --selector      Specify the selector to use for scraping.
     -f, --file          Specify the file to scrape.
     -x, --existance     Specify the existance check.
     -r, --raw_input     Specify the raw input to scrape.
+    -o, --output        Specify the output file (default: stdout).
   `);
 
 const options = {
   boolean: ["help"],
   string: [
     "attribute",
-    "html",
     "body",
     "selector",
     "file",
@@ -59,12 +59,12 @@ const options = {
   alias: {
     h: "help",
     a: "attribute",
-    ht: "html",
     b: "body",
     e: "selector",
     f: "file",
     x: "existance",
     r: "raw_input",
+    o: "output",
   },
 };
 
@@ -85,9 +85,8 @@ const main = async () => {
     Deno.exit(1);
   }
 
-  const root = await getDataInput(args);
+  const root = await parseHTML(args);
   const elements = root.removeWhitespace().querySelectorAll(args.selector);
-  console.log(elements.toString());
 
   if (args.attribute) {
     const results = elements
@@ -96,7 +95,6 @@ const main = async () => {
         textContent: el.textContent.trim(),
       }))
       .filter(Boolean);
-    // console.log(results.join("\n"));
     console.table(results);
   }
 };
