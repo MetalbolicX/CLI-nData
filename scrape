@@ -90,12 +90,13 @@ const main = async () => {
 
   if (args.attribute) {
     const results = elements
-      .map((el) => ({
-        [args.attribute]: el.getAttribute(args.attribute),
-        textContent: el.textContent.trim(),
-      }))
+      .map((el) =>
+        el.getAttribute(args.attribute),
+      )
       .filter(Boolean);
-    console.table(results);
+    console.log(results.join("\n"));
+  } else {
+    console.log(elements.toString());
   }
 };
 
