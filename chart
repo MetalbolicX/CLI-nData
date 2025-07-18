@@ -2,7 +2,7 @@
 
 import { parseArgs } from "@std/cli";
 import { readAll } from "@std/io";
-import { bar, transformChartData, sparkline } from "chartex";
+import { bar, transformChartData, sparkline, bullet, scatter } from "chartex";
 
 const VALID_CHART_TYPES = ["vertical_bar", "line", "scatter", "horizontal_bar"];
 
@@ -77,12 +77,67 @@ const options = {
  * @param ykey {string} - The key for the y-axis.
  * @returns {void} A void function that renders the chart.
  */
-const renderVerticalBarChart = (data, xkey, ykey) =>
+const renderVerticalBarChart = (data, xkey, ykey) => {
+  if (!(xkey.length && ykey.length)) {
+    console.error(
+      "Error: --xkey and --ykey are required for vertical bar charts."
+    );
+    Deno.exit(1);
+  }
   console.log(bar(transformChartData(data, xkey, ykey)));
+};
 
-const renderLineChart = (data, xkey, ykey) =>
+/**
+ * Renders a line chart.
+ * @param data {Object[]} - The data to be visualized.
+ * @param xkey {string} - The key for the x-axis.
+ * @param ykey {string} - The key for the y-axis.
+ * @returns {void} A void function that renders the chart.
+ */
+const renderLineChart = (data, xkey, ykey) => {
+  if (!(xkey.length && ykey.length)) {
+    console.error("Error: --xkey and --ykey are required for line charts.");
+    Deno.exit(1);
+  }
   console.log(sparkline(transformChartData(data, xkey, ykey)));
+};
 
+/** * Renders a horizontal bar chart.
+ * @param data {Object[]} - The data to be visualized.
+ * @param xkey {string} - The key for the x-axis.
+ * @param ykey {string} - The key for the y-axis.
+ * @returns {void} A void function that renders the chart.
+ */
+const renderHorizontalBarChart = (data, xkey, ykey) => {
+  if (!(xkey.length && ykey.length)) {
+    console.error(
+      "Error: --xkey and --ykey are required for horizontal bar charts."
+    );
+    Deno.exit(1);
+  }
+  console.log(bullet(transformChartData(data, xkey, ykey)));
+};
+
+/** * Renders a scatter chart.
+ * @param data {Object[]} - The data to be visualized.
+ * @param xkey {string} - The key for the x-axis.
+ * @param ykey {string} - The key for the y-axis.
+ * @returns {void} A void function that renders the chart.
+ */
+const renderScatterChart = (data, xkey, ykey) => {
+  if (!(xkey.length && ykey.length)) {
+    console.error("Error: --xkey and --ykey are required for scatter charts.");
+    Deno.exit(1);
+  }
+  console.log(scatter(transformChartData(data, xkey, ykey)));
+};
+
+const chartRenderers = {
+  vertical_bar: renderVerticalBarChart(data, xkey, ykey),
+  line: renderLineChart(data, xkey, ykey),
+  horizontal_bar: renderHorizontalBarChart(data, xkey, ykey),
+  scatter: renderScatterChart(data, xkey, ykey),
+};
 
 /**
  * Main function to parse arguments and render the chart.
@@ -112,21 +167,9 @@ const main = async () => {
 
   const dataInput = await getDataInput(args);
 
-  if (args.type === "vertical_bar") {
-    if (!args.xkey || !args.ykey) {
-      console.error(
-        "Error: --xkey and --ykey are required for vertical bar charts."
-      );
-      Deno.exit(1);
-    }
-    renderVerticalBarChart(dataInput, args.xkey, args.ykey);
-  }
-  else if (args.type === "line") {
-    if (!args.xkey || !args.ykey) {
-      console.error("Error: --xkey and --ykey are required for line charts.");
-      Deno.exit(1);
-    }
-    renderLineChart(dataInput, args.xkey, args.ykey);
+  const renderChart = chartRenderers[args.type];
+  if (renderChart) {
+    renderChart(dataInput, args.xkey, args.ykey);
   } else {
     console.error(`Error: Chart type ${args.type} is not implemented yet.`);
     Deno.exit(1);
