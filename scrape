@@ -38,33 +38,26 @@ Usage: scrape [options]
 Options:
     -h, --help          Show this help message
     -a, --attribute     Specify the attribute to scrape.
-    -b, --body          Specify the body element to scrape.
     -e, --selector      Specify the selector to use for scraping.
     -f, --file          Specify the file to scrape.
     -x, --existance     Specify the existance check.
     -r, --raw_input     Specify the raw input to scrape.
     -o, --output        Specify the output file (default: stdout).
+    -t, --text          Specify to extract text content.
   `);
 
 const options = {
-  boolean: ["help"],
-  string: [
-    "attribute",
-    "body",
-    "selector",
-    "file",
-    "existance",
-    "raw_input",
-  ],
+  boolean: ["help", "existance", "text"],
+  string: ["attribute", "selector", "file", "raw_input"],
   alias: {
     h: "help",
     a: "attribute",
-    b: "body",
     e: "selector",
     f: "file",
     x: "existance",
     r: "raw_input",
     o: "output",
+    t: "text",
   },
 };
 
@@ -90,12 +83,17 @@ const main = async () => {
 
   if (args.attribute) {
     const results = elements
-      .map((el) =>
-        el.getAttribute(args.attribute),
-      )
+      .map((el) => el.getAttribute(args.attribute))
       .filter(Boolean);
     console.log(results.join("\n"));
+  } else if (args.existance) {
+    const exists = elements.length > 0;
+    console.log(exists ? true : false);
+  } else if (args.text) {
+    const results = elements.map((el) => el.textContent.trim());
+    console.log(results.join("\n"));
   } else {
+    console.log("Last option");
     console.log(elements.toString());
   }
 };
