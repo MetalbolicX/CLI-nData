@@ -67,7 +67,7 @@ const handleAttribute = (elements, attribute, selector) => {
   const results = elements
     .map((el) => el.getAttribute(attribute))
     .filter(Boolean);
-  if (results.length === 0) {
+  if (!results.length) {
     console.error(
       `No attribute '${attribute}' found for selector: ${selector}`
     );
@@ -86,14 +86,14 @@ const handleExistence = (elements, selector) => {
 
 const handleText = (elements, selector) => {
   const results = elements.map((el) => el.textContent.trim());
-  if (results.length === 0) {
+  if (!results.length) {
     console.error(`No text content found for selector: ${selector}`);
   }
   console.log(results.join("\n"));
 };
 
 const handleDefault = (elements, selector) => {
-  if (elements.length === 0) {
+  if (!elements.length) {
     console.error(`No elements found for selector: ${selector}`);
   }
   console.log(elements.toString());
