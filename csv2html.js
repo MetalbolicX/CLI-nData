@@ -28,7 +28,7 @@ const csvRowsToHtmlTable = (rows) => {
   if (!rows.length) return "<table></table>";
   const columns = Object.keys(rows[0]);
   const thead = `<thead><tr>${columns
-    .map((col) => `<th scope=\"col\">${col}</th>`)
+    .map((col) => `<th>${col}</th>`)
     .join("")}</tr></thead>`;
   const tbody = `<tbody>${rows
     .map(
@@ -42,7 +42,12 @@ const csvRowsToHtmlTable = (rows) => {
 const main = async () => {
   const csvText = await readStdin();
   const source = ReadableStream.from([csvText]);
-  const stream = source.pipeThrough(new CsvParseStream({}));
+  const stream = source.pipeThrough(new CsvParseStream({
+    separator: ",",
+    trimLeadingSpace: true,
+    fieldsPerRecord: 0, // Auto-detect number of fields
+    skipFirstRow: true, // Include header row
+  }));
   const rows = await Array.fromAsync(stream);
   const htmlTable = csvRowsToHtmlTable(rows);
   console.log(htmlTable);
