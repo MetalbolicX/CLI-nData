@@ -7,6 +7,28 @@ import xPathToCss from "xpath-to-css";
 
 const XPATH_PREFIX = "//";
 
+/**
+ * Extracts data from elements using a schema object.
+ * @param {HTMLElement[]} elements - The elements to extract from.
+ * @param {Object} schema - The schema object mapping keys to attribute/method names.
+ * @returns {Object[]} Array of extracted objects.
+ */
+const extractWithSchema = (elements, schema) =>
+  elements.map((element) => {
+    const result = {};
+    for (const [key, property] of Object.entries(schema)) {
+      if (property === "textContent") {
+        result[key] = element.textContent?.trim() ?? "";
+      } else if (property === "innerHTML") {
+        result[key] = element.innerHTML ?? "";
+      } else {
+        result[key] = element.getAttribute(property) ?? "";
+      }
+    }
+    return result;
+  });
+
+
 /** Parses the HTML input from either a file or stdin.
  * @param {Object} args - The command line arguments.
  * @returns {Promise<HTMLElement>} The parsed HTML root element.
@@ -99,19 +121,7 @@ const handleExtracts = async (root, extractsStr, args) => {
       ? xPathToCss(extract.selector)
       : extract.selector;
     const elements = root.removeWhitespace().querySelectorAll(selector);
-    const items = elements.map((el) => {
-      const obj = {};
-      for (const [key, value] of Object.entries(extract.schema)) {
-        if (value === "textContent") {
-          obj[key] = el.textContent?.trim() ?? "";
-        } else if (value === "innerHTML") {
-          obj[key] = el.innerHTML ?? "";
-        } else {
-          obj[key] = el.getAttribute(value) ?? "";
-        }
-      }
-      return obj;
-    });
+    const items = extractWithSchema(elements, extract.schema);
     result[extract.name || selector] = items;
   }
   await outputResult(JSON.stringify(result, null, 2), args);
@@ -132,19 +142,7 @@ const handleDataSchema = async (elements, schemaStr, selector, args) => {
     console.error("Error: Invalid JSON schema for --data flag.");
     Deno.exit(1);
   }
-  const results = elements.map((el) => {
-    const obj = {};
-    for (const [key, value] of Object.entries(schema)) {
-      if (value === "textContent") {
-        obj[key] = el.textContent?.trim() ?? "";
-      } else if (value === "innerHTML") {
-        obj[key] = el.innerHTML ?? "";
-      } else {
-        obj[key] = el.getAttribute(value) ?? "";
-      }
-    }
-    return obj;
-  });
+  const results = extractWithSchema(elements, schema);
   if (!results.length) {
     console.error(`No elements found for selector: ${selector}`);
   }
