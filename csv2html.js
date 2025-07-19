@@ -15,11 +15,8 @@ import { CsvParseStream } from "@std/csv/parse-stream";
  */
 const readStdin = async () => {
   const decoder = new TextDecoder();
-  let csvText = "";
-  for await (const chunk of Deno.stdin.readable) {
-    csvText += decoder.decode(chunk);
-  }
-  return csvText;
+  const chunks = await Array.fromAsync(Deno.stdin.readable);
+  return chunks.map(chunk => decoder.decode(chunk)).join("");
 };
 
 /**
