@@ -1,4 +1,4 @@
-#!/usr/bin/env deno
+#!/usr/bin/env -S deno run -W
 "use strict";
 
 /*
@@ -9,6 +9,35 @@
 */
 
 import { CsvParseStream } from "@std/csv/parse-stream";
+import { parseArgs } from "@std/cli";
+
+/**
+ * Displays the help message for the chart command.
+ * @returns {void}
+ */
+const showHelp = () =>
+  console.log(`
+Usage: csv2html [options]
+Options:
+    -h, --help          Show this help message
+    -o, --output        Specify the output file (default: stdout).
+    -d, --delimiter     Specify the CSV delimiter (default: ',').
+    -H, --header        Specify if the files does not have a header row.
+    -f, --fields        Specify the fields to include as a number (default: 0, it mean all).
+  `);
+
+const options = {
+  boolean: ["help", "header"],
+  string: ["output", "delimiter", "fields"],
+  alias: {
+    h: "help",
+    o: "output",
+    d: "delimiter",
+    H: "header",
+    f: "fields",
+  },
+};
+
 
 /**
  * Reads CSV data from stdin and outputs a semantic HTML table.
@@ -36,21 +65,57 @@ const csvRowsToHtmlTable = (rows) => {
         `<tr>${columns.map((col) => `<td>${row[col]}</td>`).join("")}</tr>`
     )
     .join("")}</tbody>`;
-  return `<table>${thead}${tbody}</table>`;
+  // return `<table>${thead}${tbody}</table>`;
+  return /*html*/`
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="https://unpkg.com/@colinaut/action-table/dist/action-table.css">
+  <script type="module" src="https://unpkg.com/@colinaut/action-table/dist/index.js"></script>
+  <title>CSV to HTML Table</title>
+</head>
+<body>
+  <action-table>
+    <table>
+      ${thead}${tbody}
+    </table>
+  </action-table>
+</body>
+</html>`;
 };
 
+/** * Main function to parse command line arguments and convert CSV to HTML.
+ * @returns {Promise<void>} Resolves when the operation is complete.
+ */
 const main = async () => {
+  const args = parseArgs(Deno.args, options);
+
+  if (args.help) {
+    showHelp();
+    Deno.exit(0);
+  }
+
   const csvText = await readStdin();
   const source = ReadableStream.from([csvText]);
+
   const stream = source.pipeThrough(new CsvParseStream({
-    separator: ",",
+    separator: args.delimiter || ",",
     trimLeadingSpace: true,
-    fieldsPerRecord: 0, // Auto-detect number of fields
-    skipFirstRow: true, // Include header row
+    fieldsPerRecord: parseInt(args.fields, 10) || 0, // Auto-detect number of fields
+    skipFirstRow: !args.header,
   }));
+
   const rows = await Array.fromAsync(stream);
   const htmlTable = csvRowsToHtmlTable(rows);
+
+  if (args.output?.length) {
+    await Deno.writeTextFile(args.output, htmlTable);
+    return;
+  }
   console.log(htmlTable);
 };
 
-main();
+if (import.meta.main) {
+  main()
+}
