@@ -1,0 +1,323 @@
+#!/usr/bin/env -S deno run -EW
+"use strict";
+
+import { parseArgs } from "@std/cli";
+import { readAll } from "@std/io";
+import { parse } from "node-html-parser";
+import xPathToCss from "xpath-to-css";
+
+const XPATH_PREFIX = "//";
+
+/**
+ * Extracts data from elements using a schema object.
+ * @param {HTMLElement[]} elements - The elements to extract from.
+ * @param {Object} schema - The schema object mapping keys to attribute/method names.
+ * @returns {Object[]} Array of extracted objects.
+ */
+const extractWithSchema = (elements, schema) =>
+  elements.map((element) => {
+    const result = {};
+    for (const [key, property] of Object.entries(schema)) {
+      if (property === "textContent") {
+        result[key] = element.textContent?.trim() ?? "";
+      } else if (property === "innerHTML") {
+        result[key] = element.innerHTML ?? "";
+      } else {
+        result[key] = element.getAttribute(property) ?? "";
+      }
+    }
+    return result;
+  });
+
+
+/** Parses the HTML input from either a file or stdin.
+ * @param {Object} args - The command line arguments.
+ * @returns {Promise<HTMLElement>} The parsed HTML root element.
+ */
+const parseHTML = async (args) => {
+  // If --file is provided, read from file
+  if (typeof args.file === "string" && args.file.trim().length > 0) {
+    try {
+      const fileContent = await Deno.readTextFile(args.file);
+      if (!fileContent.trim()) {
+        console.error(`Error: File '${args.file}' is empty.`);
+        Deno.exit(1);
+      }
+      return parse(fileContent);
+    } catch (err) {
+      console.error(
+        `Error: Unable to read file '${args.file}'. ${err.message || err}`
+      );
+      Deno.exit(1);
+    }
+  }
+
+  // Otherwise, read from stdin
+  const buffer = await readAll(Deno.stdin);
+  const input = new TextDecoder().decode(buffer).trim();
+
+  if (!input) {
+    console.error("Error: No data provided via --file, --html, or stdin.");
+    Deno.exit(1);
+  }
+
+  return parse(input);
+};
+
+/**
+ * Displays the help message for the chart command.
+ * @returns {void}
+ */
+const showHelp = () =>
+  console.log(`
+Usage: scrape [options]
+Options:
+    -a, --attribute     Specify the attribute to scrape.
+    -d, --data          Specify a schema object for extracting multiple attributes/properties as JSON. Example: '{"identifier":"id","url":"href","content":"textContent"}'
+    -e, --extracts      Specify a JSON array of extraction instructions. Example: '[{"selector":"a","schema":{"content":"textContent","url":"href"}},{"selector":"time","schema":{"time":"datetime"}}]'
+    -h, --help          Show this help message
+    -o, --output        Specify the output file (default: stdout).
+    -s, --selector      Specify the selector to use for scraping.
+    -t, --text          Specify to extract text content.
+    -x, --existance     Specify the existance check.
+  `);
+
+const options = {
+  boolean: ["help", "existance", "text"],
+  string: ["attribute", "selector", "output", "data", "extracts"],
+  alias: {
+    a: "attribute",
+    d: "data",
+    e: "extracts",
+    h: "help",
+    o: "output",
+    s: "selector", // Added alias for selector
+    t: "text",
+    x: "existance",
+  },
+};
+/**
+ * Handles extracting multiple selectors and schemas from the HTML document.
+ * @param {HTMLElement} root - The parsed HTML root element.
+ * @param {string} extractsStr - The JSON array string of extraction instructions.
+ * @param {Object} args - The command line arguments.
+ * @returns {Promise<void>}
+ */
+const handleExtracts = async (root, extractsStr, args) => {
+  let extracts;
+  try {
+    extracts = JSON.parse(extractsStr);
+    if (!Array.isArray(extracts)) throw new Error();
+  } catch (_err) {
+    console.error("Error: Invalid JSON array for --extracts flag.");
+    Deno.exit(1);
+  }
+  const result = {};
+  for (const extract of extracts) {
+    if (!extract.selector || !extract.schema || typeof extract.schema !== "object") {
+      console.error("Error: Each extract must have a selector and a schema object.");
+      Deno.exit(1);
+    }
+    const selector = extract.selector.startsWith(XPATH_PREFIX)
+      ? xPathToCss(extract.selector)
+      : extract.selector;
+    const elements = root.removeWhitespace().querySelectorAll(selector);
+    const items = extractWithSchema(elements, extract.schema);
+    result[extract.name || selector] = items;
+  }
+  await outputResult(JSON.stringify(result, null, 2), args);
+};
+/**
+ * Handles extracting multiple attributes/properties using a schema object.
+ * @param {HTMLElement[]} elements - The elements to extract from.
+ * @param {string} schemaStr - The schema string (JSON object).
+ * @param {string} selector - The selector used for scraping.
+ * @param {Object} args - The command line arguments.
+ * @returns {Promise<void>}
+ */
+const handleDataSchema = async (elements, schemaStr, selector, args) => {
+  let schema;
+  try {
+    schema = JSON.parse(schemaStr);
+  } catch (_err) {
+    console.error("Error: Invalid JSON schema for --data flag.");
+    Deno.exit(1);
+  }
+  const results = extractWithSchema(elements, schema);
+  if (!results.length) {
+    console.error(`No elements found for selector: ${selector}`);
+  }
+  await outputResult(JSON.stringify(results, null, 2), args);
+};
+
+/** * Outputs the result to a file or stdout.
+ * @param {string} result - The result to output.
+ * @param {Object} args - The command line arguments.
+ * @returns {Promise<void>}
+ */
+const outputResult = async (result, args) => {
+  if (args.output) {
+    try {
+      await Deno.writeTextFile(args.output, result);
+    } catch (err) {
+      console.error(
+        `Error: Unable to write to file '${args.output}'. ${err.message || err}`
+      );
+      Deno.exit(1);
+    }
+  } else {
+    console.log(result);
+  }
+};
+
+/** * Handles the attribute scraping logic.
+ * @param {HTMLElement[]} elements - The elements to scrape.
+ * @param {string} attribute - The attribute to scrape.
+ * @param {string} selector - The selector used for scraping.
+ * @param {Object} args - The command line arguments.
+ * @returns {Promise<void>}
+ */
+const handleAttribute = async (elements, attribute, selector, args) => {
+  const results = elements
+    .map((el) => el.getAttribute(attribute))
+    .filter(Boolean);
+  if (!results.length) {
+    console.error(
+      `No attribute '${attribute}' found for selector: ${selector}`
+    );
+  }
+  await outputResult(results.join("\n"), args);
+};
+
+/** * Handles the existence check logic.
+ * @param {HTMLElement[]} elements - The elements to check.
+ * @param {string} selector - The selector used for checking.
+ * @param {Object} args - The command line arguments.
+ * @returns {Promise<void>}
+ */
+const handleExistence = (elements, selector, _args) => {
+  if (elements.length > 0) {
+    Deno.exit(0);
+  } else {
+    console.error("No elements found for selector: " + selector);
+    Deno.exit(1);
+  }
+};
+
+/** * Handles the text extraction logic.
+ * @param {HTMLElement[]} elements - The elements to extract text from.
+ * @param {string} selector - The selector used for scraping.
+ * @param {Object} args - The command line arguments.
+ * @returns {Promise<void>}
+ */
+const handleText = async (elements, selector, args) => {
+  const results = elements.map((el) => el.textContent.trim());
+  if (!results.length) {
+    console.error(`No text content found for selector: ${selector}`);
+  }
+  await outputResult(results.join("\n"), args);
+};
+
+/** * Handles the default case when no specific action is specified.
+ * @param {HTMLElement[]} elements - The elements to handle.
+ * @param {string} selector - The selector used for scraping.
+ * @param {Object} args - The command line arguments.
+ * @returns {Promise<void>}
+ */
+const handleDefault = async (elements, selector, args) => {
+  if (!elements.length) {
+    console.error(`No elements found for selector: ${selector}`);
+  }
+  await outputResult(elements.toString(), args);
+};
+
+/**
+ * Main function to parse arguments and render the chart.
+ * @returns {void}
+ */
+const main = async () => {
+  const args = parseArgs(Deno.args, options);
+
+  if (args.help) {
+    showHelp();
+    Deno.exit(0);
+  }
+
+  const root = await parseHTML(args);
+
+  // Strategy pattern: map flags to handler functions
+  const strategies = {
+    extracts: async () => {
+      await handleExtracts(root, args.extracts, args);
+    },
+    data: async () => {
+      if (!args.selector?.length) {
+        console.error("Error: --selector is a required option for --data.");
+        Deno.exit(1);
+      }
+      const selector = args.selector.startsWith(XPATH_PREFIX)
+        ? xPathToCss(args.selector)
+        : args.selector;
+      const elements = root.removeWhitespace().querySelectorAll(selector);
+      await handleDataSchema(elements, args.data, selector, args);
+    },
+    attribute: async () => {
+      if (!args.selector?.length) {
+        console.error("Error: --selector is a required option for --attribute.");
+        Deno.exit(1);
+      }
+      const selector = args.selector.startsWith(XPATH_PREFIX)
+        ? xPathToCss(args.selector)
+        : args.selector;
+      const elements = root.removeWhitespace().querySelectorAll(selector);
+      await handleAttribute(elements, args.attribute, selector, args);
+    },
+    existance: () => {
+      if (!args.selector?.length) {
+        console.error("Error: --selector is a required option for --existance.");
+        Deno.exit(1);
+      }
+      const selector = args.selector.startsWith(XPATH_PREFIX)
+        ? xPathToCss(args.selector)
+        : args.selector;
+      const elements = root.removeWhitespace().querySelectorAll(selector);
+      handleExistence(elements, selector, args);
+    },
+    text: async () => {
+      if (!args.selector?.length) {
+        console.error("Error: --selector is a required option for --text.");
+        Deno.exit(1);
+      }
+      const selector = args.selector.startsWith(XPATH_PREFIX)
+        ? xPathToCss(args.selector)
+        : args.selector;
+      const elements = root.removeWhitespace().querySelectorAll(selector);
+      await handleText(elements, selector, args);
+    },
+    default: async () => {
+      if (!args.selector?.length) {
+        console.error("Error: --selector is a required option.");
+        Deno.exit(1);
+      }
+      const selector = args.selector.startsWith(XPATH_PREFIX)
+        ? xPathToCss(args.selector)
+        : args.selector;
+      const elements = root.removeWhitespace().querySelectorAll(selector);
+      await handleDefault(elements, selector, args);
+    },
+  };
+
+  // Find which strategy to use
+  for (const key of ["extracts", "data", "attribute", "existance", "text"]) {
+    if (args[key]) {
+      await strategies[key]();
+      return;
+    }
+  }
+  // Fallback to default
+  await strategies.default();
+};
+
+if (import.meta.main) {
+  main();
+}
