@@ -51,25 +51,70 @@ Usage: scrape [options]
 Options:
     -h, --help          Show this help message
     -a, --attribute     Specify the attribute to scrape.
-    -e, --selector      Specify the selector to use for scraping.
+    -s, --selector      Specify the selector to use for scraping.
     -x, --existance     Specify the existance check.
     -o, --output        Specify the output file (default: stdout).
     -t, --text          Specify to extract text content.
     -d, --data          Specify a schema object for extracting multiple attributes/properties as JSON. Example: '{"identifier":"id","url":"href","content":"textContent"}'
+    -e, --extracts      Specify a JSON array of extraction instructions. Example: '[{"selector":"a","schema":{"content":"textContent","url":"href"}},{"selector":"time","schema":{"time":"datetime"}}]'
   `);
 
 const options = {
   boolean: ["help", "existance", "text"],
-  string: ["attribute", "selector", "output", "data"],
+  string: ["attribute", "selector", "output", "data", "extracts"],
   alias: {
-    h: "help",
     a: "attribute",
-    e: "selector",
-    x: "existance",
-    o: "output",
-    t: "text",
     d: "data",
+    e: "extracts",
+    h: "help",
+    o: "output",
+    s: "selector", // Added alias for selector
+    t: "text",
+    x: "existance",
   },
+};
+/**
+ * Handles extracting multiple selectors and schemas from the HTML document.
+ * @param {HTMLElement} root - The parsed HTML root element.
+ * @param {string} extractsStr - The JSON array string of extraction instructions.
+ * @param {Object} args - The command line arguments.
+ * @returns {Promise<void>}
+ */
+const handleExtracts = async (root, extractsStr, args) => {
+  let extracts;
+  try {
+    extracts = JSON.parse(extractsStr);
+    if (!Array.isArray(extracts)) throw new Error();
+  } catch (_err) {
+    console.error("Error: Invalid JSON array for --extracts flag.");
+    Deno.exit(1);
+  }
+  const result = {};
+  for (const extract of extracts) {
+    if (!extract.selector || !extract.schema || typeof extract.schema !== "object") {
+      console.error("Error: Each extract must have a selector and a schema object.");
+      Deno.exit(1);
+    }
+    const selector = extract.selector.startsWith(XPATH_PREFIX)
+      ? xPathToCss(extract.selector)
+      : extract.selector;
+    const elements = root.removeWhitespace().querySelectorAll(selector);
+    const items = elements.map((el) => {
+      const obj = {};
+      for (const [key, value] of Object.entries(extract.schema)) {
+        if (value === "textContent") {
+          obj[key] = el.textContent?.trim() ?? "";
+        } else if (value === "innerHTML") {
+          obj[key] = el.innerHTML ?? "";
+        } else {
+          obj[key] = el.getAttribute(value) ?? "";
+        }
+      }
+      return obj;
+    });
+    result[extract.name || selector] = items;
+  }
+  await outputResult(JSON.stringify(result, null, 2), args);
 };
 /**
  * Handles extracting multiple attributes/properties using a schema object.
@@ -199,21 +244,25 @@ const main = async () => {
     Deno.exit(0);
   }
 
+  const root = await parseHTML(args);
+
+  if (args.extracts) {
+    await handleExtracts(root, args.extracts, args);
+    return;
+  }
+
   if (!args.selector?.length) {
     console.error("Error: --selector is a required option.");
     Deno.exit(1);
   }
 
-  const root = await parseHTML(args);
   const selector = args.selector.startsWith(XPATH_PREFIX)
     ? xPathToCss(args.selector)
     : args.selector;
-
   const elements = root.removeWhitespace().querySelectorAll(selector);
 
   // Dispatch
   if (args.data) {
-    console.log(args.data)
     await handleDataSchema(elements, args.data, selector, args);
   } else if (args.attribute) {
     await handleAttribute(elements, args.attribute, selector, args);
