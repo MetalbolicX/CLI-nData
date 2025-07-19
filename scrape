@@ -49,14 +49,14 @@ const showHelp = () =>
   console.log(`
 Usage: scrape [options]
 Options:
-    -h, --help          Show this help message
     -a, --attribute     Specify the attribute to scrape.
-    -s, --selector      Specify the selector to use for scraping.
-    -x, --existance     Specify the existance check.
-    -o, --output        Specify the output file (default: stdout).
-    -t, --text          Specify to extract text content.
     -d, --data          Specify a schema object for extracting multiple attributes/properties as JSON. Example: '{"identifier":"id","url":"href","content":"textContent"}'
     -e, --extracts      Specify a JSON array of extraction instructions. Example: '[{"selector":"a","schema":{"content":"textContent","url":"href"}},{"selector":"time","schema":{"time":"datetime"}}]'
+    -h, --help          Show this help message
+    -o, --output        Specify the output file (default: stdout).
+    -s, --selector      Specify the selector to use for scraping.
+    -t, --text          Specify to extract text content.
+    -x, --existance     Specify the existance check.
   `);
 
 const options = {
