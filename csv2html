@@ -19,22 +19,22 @@ const showHelp = () =>
   console.log(`
 Usage: csv2html [options]
 Options:
+    -d, --delimiter     Specify the CSV delimiter (default: ',').
+    -f, --fields        Specify the fields to include as a number (default: 0, it mean all).
+    -H, --header        Specify if the files does not have a header row.
     -h, --help          Show this help message
     -o, --output        Specify the output file (default: stdout).
-    -d, --delimiter     Specify the CSV delimiter (default: ',').
-    -H, --header        Specify if the files does not have a header row.
-    -f, --fields        Specify the fields to include as a number (default: 0, it mean all).
   `);
 
 const options = {
   boolean: ["help", "header"],
   string: ["output", "delimiter", "fields"],
   alias: {
+    d: "delimiter",
+    f: "fields",
+    H: "header",
     h: "help",
     o: "output",
-    d: "delimiter",
-    H: "header",
-    f: "fields",
   },
 };
 
