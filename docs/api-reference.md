@@ -447,38 +447,6 @@ httpservedir [PORT] [DIR]
 ```sh
 httpservedir
 ```
-Output: Serves the current directory on port `8000`.
-
-#### Serve Current Directory on a Custom Port
-
-```sh
-httpservedir 8080
-```
-Output: Serves the current directory on port `8080`.
-
-#### Serve a Specific Directory on a Custom Port
-
-```sh
-httpservedir 8080 /path/to/directory
-```
-Output: Serves `/path/to/directory` on port `8080`.
-
-#### Error: Invalid Port
-
-```sh
-httpservedir 99999
-```
-Output: Error message about invalid port number.
-
-#### Error: Directory Does Not Exist
-
-```sh
-httpservedir 8000 /not/a/real/dir
-```
-Output: Error message about missing directory.
-
-> [!Warning]
-> When specifying a directory, you must also specify the port. The script will exit with an error if the port or directory is invalid.
 
 ## `plot`
 
