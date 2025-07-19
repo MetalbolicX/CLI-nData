@@ -55,11 +55,12 @@ Options:
     -x, --existance     Specify the existance check.
     -o, --output        Specify the output file (default: stdout).
     -t, --text          Specify to extract text content.
+    -d, --data          Specify a schema object for extracting multiple attributes/properties as JSON. Example: '{"identifier":"id","url":"href","content":"textContent"}'
   `);
 
 const options = {
   boolean: ["help", "existance", "text"],
-  string: ["attribute", "selector", "output"],
+  string: ["attribute", "selector", "output", "data"],
   alias: {
     h: "help",
     a: "attribute",
@@ -67,7 +68,42 @@ const options = {
     x: "existance",
     o: "output",
     t: "text",
+    d: "data",
   },
+};
+/**
+ * Handles extracting multiple attributes/properties using a schema object.
+ * @param {HTMLElement[]} elements - The elements to extract from.
+ * @param {string} schemaStr - The schema string (JSON object).
+ * @param {string} selector - The selector used for scraping.
+ * @param {Object} args - The command line arguments.
+ * @returns {Promise<void>}
+ */
+const handleDataSchema = async (elements, schemaStr, selector, args) => {
+  let schema;
+  try {
+    schema = JSON.parse(schemaStr);
+  } catch (_err) {
+    console.error("Error: Invalid JSON schema for --data flag.");
+    Deno.exit(1);
+  }
+  const results = elements.map((el) => {
+    const obj = {};
+    for (const [key, value] of Object.entries(schema)) {
+      if (value === "textContent") {
+        obj[key] = el.textContent?.trim() ?? "";
+      } else if (value === "innerHTML") {
+        obj[key] = el.innerHTML ?? "";
+      } else {
+        obj[key] = el.getAttribute(value) ?? "";
+      }
+    }
+    return obj;
+  });
+  if (!results.length) {
+    console.error(`No elements found for selector: ${selector}`);
+  }
+  await outputResult(JSON.stringify(results, null, 2), args);
 };
 
 /** * Outputs the result to a file or stdout.
@@ -115,7 +151,7 @@ const handleAttribute = async (elements, attribute, selector, args) => {
  * @param {Object} args - The command line arguments.
  * @returns {Promise<void>}
  */
-const handleExistence = async (elements, selector, args) => {
+const handleExistence = (elements, selector, _args) => {
   if (elements.length > 0) {
     Deno.exit(0);
   } else {
@@ -176,10 +212,13 @@ const main = async () => {
   const elements = root.removeWhitespace().querySelectorAll(selector);
 
   // Dispatch
-  if (args.attribute) {
+  if (args.data) {
+    console.log(args.data)
+    await handleDataSchema(elements, args.data, selector, args);
+  } else if (args.attribute) {
     await handleAttribute(elements, args.attribute, selector, args);
   } else if (args.existance) {
-    await handleExistence(elements, selector, args);
+    handleExistence(elements, selector, args);
   } else if (args.text) {
     await handleText(elements, selector, args);
   } else {
