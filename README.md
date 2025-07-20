@@ -9,6 +9,7 @@
 **Supported Versions:**
 
 ![Python version](https://img.shields.io/badge/Python-%3E%3D3.12.0-blue)
+![Deno version](https://img.shields.io/badge/Deno-%3E%3D2.4.0-blue)
 
 ## 🚀 Quick Installation
 
@@ -40,6 +41,12 @@ Contributions are welcome! Please feel free to submit a Pull Request.
       <a href="https://www.python.org/psf-landing/" target="_blank">
         <img src="https://s3.dualstack.us-east-2.amazonaws.com/pythondotorg-assets/media/files/python-logo-only.svg" alt="Python" width="42" height="42" /><br/>
         <b>Python</b><br/>
+      </a>
+    </td>
+    <td align="center">
+      <a href="https://deno.land/" target="_blank">
+        <img src="https://docs.deno.com/img/logo.svg" alt="Deno" width="42" height="42" /><br/>
+        <b>Deno</b><br/>
       </a>
     </td>
   </tr>
