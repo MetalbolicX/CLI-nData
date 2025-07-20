@@ -5,6 +5,8 @@ import { readAll } from "@std/io";
 import { bar, transformChartData, sparkline, bullet, scatter } from "chartex";
 
 const VALID_CHART_TYPES = ["vertical_bar", "line", "scatter", "horizontal_bar"];
+const WIDTH = 40;
+const HEIGHT = 15;
 
 /** * A utility function to create a pipeline of functions.
  * It takes multiple functions as arguments and returns
@@ -111,7 +113,7 @@ const options = {
 const renderVerticalBarChart = (data, xkey, ykey) =>
   pipe(
     (d) => transformChartData(d, xkey, ykey),
-    bar,
+    (d) => bar(d, { width: WIDTH, height: HEIGHT }),
     console.log
   )(data);
 
@@ -125,7 +127,7 @@ const renderVerticalBarChart = (data, xkey, ykey) =>
 const renderLineChart = (data, xkey, ykey) =>
   pipe(
     (d) => transformChartData(d, xkey, ykey),
-    (chartData) => sparkline(chartData, { width: 40, height: 15 }),
+    (d) => sparkline(d, { width: WIDTH, height: HEIGHT }),
     console.log
   )(data);
 
@@ -138,7 +140,7 @@ const renderLineChart = (data, xkey, ykey) =>
 const renderHorizontalBarChart = (data, xkey, ykey) =>
   pipe(
     (d) => transformChartData(d, xkey, ykey),
-    bullet,
+    (d) => bullet(d, { width: WIDTH, height: HEIGHT }),
     console.log
   )(data);
 
@@ -151,7 +153,7 @@ const renderHorizontalBarChart = (data, xkey, ykey) =>
 const renderScatterChart = (data, xkey, ykey) =>
   pipe(
     (d) => transformChartData(d, xkey, ykey),
-    scatter,
+    (d) => scatter(d, { width: WIDTH, height: HEIGHT }),
     console.log
   )(data);
 
