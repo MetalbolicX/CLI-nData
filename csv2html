@@ -65,7 +65,6 @@ const csvRowsToHtmlTable = (rows) => {
         `<tr>${columns.map((col) => `<td>${row[col]}</td>`).join("")}</tr>`
     )
     .join("")}</tbody>`;
-  // return `<table>${thead}${tbody}</table>`;
   return /*html*/`
 <!DOCTYPE html>
 <html>
@@ -85,35 +84,50 @@ const csvRowsToHtmlTable = (rows) => {
 </html>`;
 };
 
-/** * Main function to parse command line arguments and convert CSV to HTML.
- * @returns {Promise<void>} Resolves when the operation is complete.
+/**
+ * Parses the CSV stream from the input text.
+ * @param args - Command line arguments parsed by parseArgs
+ * @returns A function that takes CSV text and returns a stream of parsed rows.
+ */
+const parseCsvStream = (args) => (csvText) => {
+  const source = ReadableStream.from([csvText]);
+  const stream = source.pipeThrough(new CsvParseStream({
+    separator: args.delimiter || ",",
+    trimLeadingSpace: true,
+    fieldsPerRecord: parseInt(args.fields, 10) || 0,
+    skipFirstRow: !args.header,
+  }));
+  return Array.fromAsync(stream);
+};
+
+/** * Writes the HTML table to a file or prints it to stdout.
+ * @param args - Command line arguments parsed by parseArgs
+ * @returns A function that takes an HTML table string and writes or prints it.
+ */
+const writeOrPrintHtml = (args) => async (htmlTable) => {
+  if (args.output?.length) {
+    await Deno.writeTextFile(args.output, htmlTable);
+    return;
+  }
+  console.log(htmlTable);
+};
+
+/**
+ * Main function to parse command line arguments, read CSV from stdin,
+ * convert it to HTML, and write or print the result.
+ * @returns {Promise<void>}
  */
 const main = async () => {
   const args = parseArgs(Deno.args, options);
-
   if (args.help) {
     showHelp();
     Deno.exit(0);
   }
 
   const csvText = await readStdin();
-  const source = ReadableStream.from([csvText]);
-
-  const stream = source.pipeThrough(new CsvParseStream({
-    separator: args.delimiter || ",",
-    trimLeadingSpace: true,
-    fieldsPerRecord: parseInt(args.fields, 10) || 0, // Auto-detect number of fields
-    skipFirstRow: !args.header,
-  }));
-
-  const rows = await Array.fromAsync(stream);
+  const rows = await parseCsvStream(args)(csvText);
   const htmlTable = csvRowsToHtmlTable(rows);
-
-  if (args.output?.length) {
-    await Deno.writeTextFile(args.output, htmlTable);
-    return;
-  }
-  console.log(htmlTable);
+  await writeOrPrintHtml(args)(htmlTable);
 };
 
 if (import.meta.main) {
