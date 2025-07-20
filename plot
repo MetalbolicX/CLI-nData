@@ -6,6 +6,15 @@ import { bar, transformChartData, sparkline, bullet, scatter } from "chartex";
 
 const VALID_CHART_TYPES = ["vertical_bar", "line", "scatter", "horizontal_bar"];
 
+/** * A utility function to create a pipeline of functions.
+ * It takes multiple functions as arguments and returns
+ * a new function that applies them sequentially to an input value.
+ * @param {...Function} fns - The functions to be pipelined.
+ * @returns {Function} A function that takes an input and applies the pipelined functions.
+ */
+const pipe = (...fns) => (x) =>
+  fns.reduce((v, f) => f(v), x);
+
 /**
  * Retrieves and parses the data input for the chart.
  * @param args {Record<string, any>} The command-line arguments.
@@ -41,6 +50,27 @@ const getDataInput = async (args) => {
     Deno.exit(1);
   }
 };
+
+/** * Validates the chart arguments to ensure they are correct.
+ * @param args {Record<string, any>} The command-line arguments.
+ * @returns {void} A void function that exits the process if validation fails.
+ */
+const validateChartArguments = (args) => {
+  if (!(args.type?.length && VALID_CHART_TYPES.includes(args.type))) {
+    console.error(
+      `Error: Invalid or missing chart type. Supported types are: ${VALID_CHART_TYPES.join(
+        ", "
+      )}`
+    );
+    Deno.exit(1);
+  }
+
+  if (!args.xkey || !args.ykey) {
+    console.error("Error: --xkey and --ykey are required options.");
+    Deno.exit(1);
+  }
+};
+
 
 /**
  * Displays the help message for the chart command.
@@ -79,7 +109,11 @@ const options = {
  * @returns {void} A void function that renders the chart.
  */
 const renderVerticalBarChart = (data, xkey, ykey) =>
-  console.log(bar(transformChartData(data, xkey, ykey)));
+  pipe(
+    (d) => transformChartData(d, xkey, ykey),
+    bar,
+    console.log
+  )(data);
 
 /**
  * Renders a line chart.
@@ -89,12 +123,11 @@ const renderVerticalBarChart = (data, xkey, ykey) =>
  * @returns {void} A void function that renders the chart.
  */
 const renderLineChart = (data, xkey, ykey) =>
-  console.log(
-    sparkline(transformChartData(data, xkey, ykey), {
-      width: 40,
-      height: 15,
-    })
-  );
+  pipe(
+    (d) => transformChartData(d, xkey, ykey),
+    (chartData) => sparkline(chartData, { width: 40, height: 15 }),
+    console.log
+  )(data);
 
 /** * Renders a horizontal bar chart.
  * @param data {Object[]} - The data to be visualized.
@@ -103,7 +136,11 @@ const renderLineChart = (data, xkey, ykey) =>
  * @returns {void} A void function that renders the chart.
  */
 const renderHorizontalBarChart = (data, xkey, ykey) =>
-  console.log(bullet(transformChartData(data, xkey, ykey)));
+  pipe(
+    (d) => transformChartData(d, xkey, ykey),
+    bullet,
+    console.log
+  )(data);
 
 /** * Renders a scatter chart.
  * @param data {Object[]} - The data to be visualized.
@@ -112,7 +149,11 @@ const renderHorizontalBarChart = (data, xkey, ykey) =>
  * @returns {void} A void function that renders the chart.
  */
 const renderScatterChart = (data, xkey, ykey) =>
-  console.log(scatter(transformChartData(data, xkey, ykey)));
+  pipe(
+    (d) => transformChartData(d, xkey, ykey),
+    scatter,
+    console.log
+  )(data);
 
 const chartRenderers = {
   vertical_bar: renderVerticalBarChart,
@@ -133,30 +174,13 @@ const main = async () => {
     Deno.exit(0);
   }
 
-  if (!args.type?.length) {
-    console.error("Error: --type is a required option.");
-    Deno.exit(1);
-  }
+  const dataInput = getDataInput(args);
 
-  if (!VALID_CHART_TYPES.includes(args.type)) {
-    console.error(
-      `Error: Invalid chart type. Supported types are: ${VALID_CHART_TYPES.join(
-        ", "
-      )}`
-    );
-    Deno.exit(1);
-  }
-
-  if (!(args.xkey?.length && args.ykey?.length)) {
-    console.error("Error: --xkey and --ykey are required options.");
-    Deno.exit(1);
-  }
-
-  const dataInput = await getDataInput(args);
+  validateChartArguments(args);
 
   const renderChart = chartRenderers[args.type];
   if (renderChart) {
-    renderChart(dataInput, args.xkey, args.ykey);
+    renderChart(await dataInput, args.xkey, args.ykey);
   } else {
     console.error(`Error: Chart type ${args.type} is not implemented yet.`);
     Deno.exit(1);
