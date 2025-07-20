@@ -2,14 +2,7 @@
 
 import { parseArgs } from "@std/cli";
 import { readAll } from "@std/io";
-import {
-  bar,
-  bullet,
-  scatter,
-  sparkline,
-  transformChartData,
-  transformScatterData,
-} from "chartex";
+import { bar, bullet, sparkline, transformChartData } from "chartex";
 
 const VALID_CHART_TYPES = ["vertical_bar", "line", "scatter", "horizontal_bar"];
 const WIDTH = 40;
@@ -106,7 +99,7 @@ const options = {
     t: "type",
     x: "xkey",
     y: "ykey",
-  },
+  }
 };
 
 /**
@@ -150,24 +143,24 @@ const renderHorizontalBarChart = (data, xkey, ykey) =>
     console.log
   )(data);
 
-/** * Renders a scatter chart.
- * @param data {Object[]} - The data to be visualized.
- * @param xkey {string} - The key for the x-axis.
- * @param ykey {string} - The key for the y-axis.
- * @returns {void} A void function that renders the chart.
- */
-const renderScatterChart = (data, xkey, ykey) =>
-  pipe(
-    (d) => transformScatterData(d, xkey, xkey, ykey),
-    (d) => scatter(d, { width: WIDTH, height: HEIGHT }),
-    console.log
-  )(data);
+// /** * Renders a scatter chart.
+//  * @param data {Object[]} - The data to be visualized.
+//  * @param xkey {string} - The key for the x-axis.
+//  * @param ykey {string} - The key for the y-axis.
+//  * @returns {void} A void function that renders the chart.
+//  */
+// const renderScatterChart = (data, xkey, ykey, height) =>
+//   pipe(
+//     (d) => transformScatterData(d, xkey, xkey, ykey),
+//     (d) => scatter(d, { width: WIDTH, height: +height }),
+//     console.log
+//   )(data);
 
 const chartRenderers = {
   vertical_bar: renderVerticalBarChart,
   line: renderLineChart,
   horizontal_bar: renderHorizontalBarChart,
-  scatter: renderScatterChart,
+  // scatter: renderScatterChart,
 };
 
 /**
