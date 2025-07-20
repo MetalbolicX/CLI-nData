@@ -422,7 +422,7 @@ echo '[{"hours": 0, "sales": 0}, {"hours": 1, "sales": 2}]' | plot -t line -x "h
 #### Scatter Plot
 
 ```sh
-echo '[{"x": 1, "y": 2}, {"x": 2, "y": 3}]' | plot --type scatter
+echo '[{"x": 1, "y": 2}, {"x": 2, "y": 3}]' | plot --type scatter --xkey "x" --ykey "y"
 ```
 
 #### Vertical Bar Chart
@@ -435,12 +435,6 @@ echo '[{"category": "A", "value": 10}, {"category": "B", "value": 20}]' | plot -
 
 ```sh
 echo '[{"label": "X", "score": 5}, {"label": "Y", "score": 8}]' | plot --type horizontal_bar --xkey "label" --ykey "score"
-```
-
-#### Time Series Plot
-
-```sh
-echo '[{"date": "2025-07-01", "value": 10}, {"date": "2025-07-02", "value": 20}]' | plot --type time_series --xkey "date" --ykey "value" --title "Values Over Time"
 ```
 
 ## `trim`

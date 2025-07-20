@@ -2,7 +2,14 @@
 
 import { parseArgs } from "@std/cli";
 import { readAll } from "@std/io";
-import { bar, transformChartData, sparkline, bullet, scatter } from "chartex";
+import {
+  bar,
+  bullet,
+  scatter,
+  sparkline,
+  transformChartData,
+  transformScatterData,
+} from "chartex";
 
 const VALID_CHART_TYPES = ["vertical_bar", "line", "scatter", "horizontal_bar"];
 const WIDTH = 40;
@@ -14,8 +21,10 @@ const HEIGHT = 15;
  * @param {...Function} fns - The functions to be pipelined.
  * @returns {Function} A function that takes an input and applies the pipelined functions.
  */
-const pipe = (...fns) => (x) =>
-  fns.reduce((v, f) => f(v), x);
+const pipe =
+  (...fns) =>
+  (x) =>
+    fns.reduce((v, f) => f(v), x);
 
 /**
  * Retrieves and parses the data input for the chart.
@@ -72,7 +81,6 @@ const validateChartArguments = (args) => {
     Deno.exit(1);
   }
 };
-
 
 /**
  * Displays the help message for the chart command.
@@ -152,7 +160,7 @@ const renderHorizontalBarChart = (data, xkey, ykey) =>
  */
 const renderScatterChart = (data, xkey, ykey) =>
   pipe(
-    (d) => transformChartData(d, xkey, ykey),
+    (d) => transformScatterData(d, xkey, xkey, ykey),
     (d) => scatter(d, { width: WIDTH, height: HEIGHT }),
     console.log
   )(data);
