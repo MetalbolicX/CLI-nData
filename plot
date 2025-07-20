@@ -12,6 +12,7 @@ const VALID_CHART_TYPES = ["vertical_bar", "line", "scatter", "horizontal_bar"];
  * @returns {Promise<aObject[]>} The parsed data input.
  */
 const getDataInput = async (args) => {
+  // const getDataInput = async () => {
   if (typeof args.data === "string" && args.data.trim().length > 0) {
     try {
       return JSON.parse(args.data);
@@ -77,15 +78,8 @@ const options = {
  * @param ykey {string} - The key for the y-axis.
  * @returns {void} A void function that renders the chart.
  */
-const renderVerticalBarChart = (data, xkey, ykey) => {
-  if (!(xkey.length && ykey.length)) {
-    console.error(
-      "Error: --xkey and --ykey are required for vertical bar charts."
-    );
-    Deno.exit(1);
-  }
+const renderVerticalBarChart = (data, xkey, ykey) =>
   console.log(bar(transformChartData(data, xkey, ykey)));
-};
 
 /**
  * Renders a line chart.
@@ -94,13 +88,13 @@ const renderVerticalBarChart = (data, xkey, ykey) => {
  * @param ykey {string} - The key for the y-axis.
  * @returns {void} A void function that renders the chart.
  */
-const renderLineChart = (data, xkey, ykey) => {
-  if (!(xkey.length && ykey.length)) {
-    console.error("Error: --xkey and --ykey are required for line charts.");
-    Deno.exit(1);
-  }
-  console.log(sparkline(transformChartData(data, xkey, ykey)));
-};
+const renderLineChart = (data, xkey, ykey) =>
+  console.log(
+    sparkline(transformChartData(data, xkey, ykey), {
+      width: 40,
+      height: 15,
+    })
+  );
 
 /** * Renders a horizontal bar chart.
  * @param data {Object[]} - The data to be visualized.
@@ -108,15 +102,8 @@ const renderLineChart = (data, xkey, ykey) => {
  * @param ykey {string} - The key for the y-axis.
  * @returns {void} A void function that renders the chart.
  */
-const renderHorizontalBarChart = (data, xkey, ykey) => {
-  if (!(xkey.length && ykey.length)) {
-    console.error(
-      "Error: --xkey and --ykey are required for horizontal bar charts."
-    );
-    Deno.exit(1);
-  }
+const renderHorizontalBarChart = (data, xkey, ykey) =>
   console.log(bullet(transformChartData(data, xkey, ykey)));
-};
 
 /** * Renders a scatter chart.
  * @param data {Object[]} - The data to be visualized.
@@ -124,19 +111,14 @@ const renderHorizontalBarChart = (data, xkey, ykey) => {
  * @param ykey {string} - The key for the y-axis.
  * @returns {void} A void function that renders the chart.
  */
-const renderScatterChart = (data, xkey, ykey) => {
-  if (!(xkey.length && ykey.length)) {
-    console.error("Error: --xkey and --ykey are required for scatter charts.");
-    Deno.exit(1);
-  }
+const renderScatterChart = (data, xkey, ykey) =>
   console.log(scatter(transformChartData(data, xkey, ykey)));
-};
 
 const chartRenderers = {
-  vertical_bar: renderVerticalBarChart(data, xkey, ykey),
-  line: renderLineChart(data, xkey, ykey),
-  horizontal_bar: renderHorizontalBarChart(data, xkey, ykey),
-  scatter: renderScatterChart(data, xkey, ykey),
+  vertical_bar: renderVerticalBarChart,
+  line: renderLineChart,
+  horizontal_bar: renderHorizontalBarChart,
+  scatter: renderScatterChart,
 };
 
 /**
@@ -162,6 +144,11 @@ const main = async () => {
         ", "
       )}`
     );
+    Deno.exit(1);
+  }
+
+  if (!(args.xkey?.length && args.ykey?.length)) {
+    console.error("Error: --xkey and --ykey are required options.");
     Deno.exit(1);
   }
 
