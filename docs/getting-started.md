@@ -2,6 +2,8 @@
 
 ## Prerequisites
 
+### Python Installation
+
 Ensure you have Python 3.8 or higher installed on your system. You can check your Python version by running:
 
 ```sh
@@ -16,6 +18,20 @@ If Python is not installed, download it from [python.org](https://www.python.org
 ```sh
 pip --version
 ```
+
+### Deno Installation
+
+Ensure you have Deno installed on your system. You can check your Deno version by running:
+
+```sh
+deno --version
+```
+
+If Deno is not installed, you can install it by following the instructions on the [Deno installation page](https://deno.land/manual/getting_started/installation).
+
+
+> [!Warning]
+> The scripts that depends on JavaScript will require Deno and not other JavaScript engines like Node.js because Deno provides a standard library to reduce third-party dependencies.
 
 ## Installation
 
@@ -33,7 +49,21 @@ export PATH="$HOME/cli-ndata:$PATH"
 
 This command will allow you to run CLI-nData commands from anywhere in your terminal, similar to how you use commands like `cd` or `cat`. You can add this line to your `.bashrc` or `.zshrc` file to make it permanent.
 
-3. To verify the installation, run:
+3. Install the deno dependencies by running:
+
+- Move to the CLI-nData directory:
+
+```sh
+cd cli-ndata
+```
+
+- Install the dependencies:
+
+```sh
+deno install
+```
+
+4. To verify the installation, run:
 
 ```sh
 curl 'https://en.wikipedia.org/wiki/List_of_sovereign_states' -s \

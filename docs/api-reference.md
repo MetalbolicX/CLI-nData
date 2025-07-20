@@ -108,9 +108,9 @@ echo 'id,value,flag\n1,10,A\n2,20,B' | cols -C flag body awk -F, '{print $1+$2}'
 
 ## `csv2html`
 
-This command converts CSV data to a complete HTML document with a styled table. It reads CSV from stdin, validates and normalizes the data, and outputs a ready-to-use HTML file. Supports custom delimiters, quote characters, whitespace trimming, skipping empty lines, and strict column validation. Output can be sent to stdout or a file. Robust error handling is included for invalid input and file operations.
+This command converts CSV data to a complete HTML document.
 
-**Dependencies:** Python 3, tabulate
+**Dependencies:** Deno standard library (Deno must be installed)
 
 ### Usage
 
@@ -120,63 +120,36 @@ cat data.csv | csv2html [options]
 
 ### Options
 
-- `-d, --delimiter <char>`: Specify the CSV delimiter (default: ',')
-- `-q, --quote-char <char>`: Specify the quote character (default: '"')
-- `-s, --suppress`: Suppress data rows (output headers only)
-- `-o, --output <file>`: Output file path (default: stdout)
-- `--skip-empty-lines`: Skip empty lines in CSV parsing (default: True)
-- `--no-skip-empty-lines`: Do not skip empty lines
-- `--trim-whitespace`: Trim whitespace from all cells (default: True)
-- `--no-trim-whitespace`: Do not trim whitespace from cells
-- `--strict-columns`: Fail on inconsistent column counts
-
-### Features
-
-- Converts CSV to a complete HTML document with a styled table
-- Supports custom delimiters and quote characters
-- Optionally suppresses data rows (headers only)
-- Trims whitespace and skips empty lines for clean output
-- Normalizes inconsistent rows (pads/truncates as needed)
-- Strict column validation option for data integrity
-- Outputs to stdout or a file
-- Robust error handling for invalid input and file operations
+- `-d, --delimiter <char>`: Specify the CSV delimiter (default: ',').
+- `-f`, `--fields <number>`: Specify the number of fields to include in the HTML table (default: all fields as 0).
+- `-H`, `--header`: Indicates the first line does not contain headers.
+- `-h, --help`: Show help message and exit.
+- `-o, --output <file>`: Output HTML to a file instead of stdout
 
 ### Examples
 
-#### Convert CSV to HTML (default settings)
+#### Convert CSV to HTML and prints on stdout (default settings)
 
 ```sh
-cat data.csv | csv2html > output.html
+cat data.csv | csv2html
 ```
 
 #### Use a custom delimiter and output to file
 
 ```sh
-cat data.tsv | csv2html -d $'\t' -o table.html
+cat data.tsv | csv2html -d '\t' -o table.html
 ```
 
-#### Suppress data rows (headers only)
+#### Indicates the first line does not contain headers
 
 ```sh
-cat data.csv | csv2html -s
+cat data.csv | csv2html -H
 ```
 
-#### Do not trim whitespace or skip empty lines
+#### Indicates the number of fields to include in the HTML table
 
 ```sh
-cat messy.csv | csv2html --no-trim-whitespace --no-skip-empty-lines
-```
-
-#### Strict column validation (fail on inconsistent rows)
-
-```sh
-cat inconsistent.csv | csv2html --strict-columns
-```
-
-#### Example: Convert CSV and open in browser
-
-```sh
-cat data.csv | csv2html -o table.html && xdg-open table.html
+cat inconsistent.csv | csv2html -f 3
 ```
 
 ## `dseq`
@@ -204,14 +177,6 @@ dseq [OPTIONS] FIRST INCREMENT LAST
 - `-f, --format <format_string>`: Specify the output date format (e.g., `%Y-%m-%d`, `%A, %B %d, %Y`). Uses `date` command format codes. Default: `+%F` (YYYY-MM-DD).
 - `-s, --start-date <date_string>`: Specify the base date to start from (e.g., `2023-01-01`, `tomorrow`, `yesterday`). Default: today. This affects the `0 day` offset.
 - `-h, --help`: Display help message and exit.
-
-### Features
-
-- Generate date sequences with custom increments and ranges
-- Flexible date formatting using `date` format codes
-- Specify any base date (absolute or relative)
-- Validates input and handles edge cases (e.g., zero increment, invalid ranges)
-- Secure handling of temporary files
 
 ### Examples
 
@@ -285,20 +250,12 @@ header [OPTIONS]
 
 ### Options
 
-- `-n <num>`: Number of lines to consider as header (default: 1)
-- `-a <header>`: Add header (prepends header to input)
-- `-r <header>`: Replace header (replaces existing header with new header)
-- `-e <expr>`: Apply shell expression to header (e.g., `tr "[:upper:]" "[:lower:]"`)
-- `-d`: Delete header (removes header lines)
-- `-h`: Show help message
-
-### Features
-
-- Add, replace, delete, or transform header lines
-- Supports multi-line headers via `-n`
-- Apply shell expressions to header for transformation
-- Validates arguments and prevents unsafe expressions
-- Integrates with other CLI tools for data wrangling
+- `-n <number>`: Number of lines to consider as header (default: 1).
+- `-a <header>`: Add header (prepends header to input).
+- `-r <header>`: Replace header (replaces existing header with new header).
+- `-e <expr>`: Apply shell expression to header (e.g., `tr "[:upper:]" "[:lower:]"`).
+- `-d`: Delete header (removes header lines).
+- `-h`: Show help message.
 
 ### Examples
 
@@ -328,9 +285,9 @@ seq 10 | header -a 'multi\nline' | header -n 2 -e "paste -sd_"
 
 ## `scrape`
 
-This command extracts HTML elements from a document using XPath queries or CSS3 selectors. It supports extracting attributes, checking element existence, and outputting results with optional HTML tags. The script is written in Python and uses `lxml` for parsing and `cssselect` for CSS selector support. Input can be read from stdin or a file, and multiple selectors can be processed in one call.
+This command extracts information from a HTML document. It supports XPath or CSS selectors to specify which elements to extract, and can output specific attributes from those elements.
 
-**Dependencies:** Python 3, lxml, cssselect (optional for CSS selectors)
+**Dependencies:** Deno standard library, node-html-parser, xPathToCss packages.
 
 ### Usage
 
@@ -344,108 +301,90 @@ scrape [HTML] [options]
 
 ### Options
 
-- `-a, --attribute <attr>`: Extract a specific attribute from the HTML tag (e.g., `href`, `src`)
-- `-b, --include_body_tags`: Enclose the output with `<html>` and `<body>` tags
-- `-e, --selectors <selector>`: Specify XPath queries or CSS3 selectors to extract elements (can be used multiple times)
-- `-f, --input_file <file>`: Specify a file to read the HTML input from instead of `stdin`
-- `-x, --check_existence`: Exit with code `0` if elements exist, otherwise exit with code `1`
-- `-r, --raw_input`: Do not parse the HTML before feeding it to `etree` (useful for escaping CData)
-
-### Features
-
-- Extract elements using XPath or CSS selectors (CSS selectors require `cssselect`)
-- Extract specific attributes from tags
-- Output results with optional HTML and BODY tags
-- Check for existence of elements and exit with appropriate code
-- Read input from stdin or file
-- Process multiple selectors in one call
-- Robust error handling and input validation
+- `-a, --attribute <attr>`: Extract a specific attribute from the HTML tag (e.g., `href`, `src`).
+- `-d`, `--data <schema>`: Use a specific schema to extract the attributes or information of an element.
+- `-e`, `--extracts <selectors>`: Extract information of multiple selectors.
+- `-h`, `--help`: Show help message.
+- `-o`, `--output <file>`: Output to a file instead of stdout.
+- `-s`, `--selector <selector>`: A CSS selector or XPath to extract elements.
+- `-t`, `--text`: Extract text content from the selected elements.
+- `-x`, `--exists`: Check if the selected elements exist in the HTML document.
 
 ### Examples
 
 #### Extract Links from a Webpage
 
 ```sh
-curl 'https://en.wikipedia.org/wiki/List_of_sovereign_states' -s | scrape -e 'a' -a 'href'
+curl 'https://en.wikipedia.org/wiki/List_of_sovereign_states' -s | scrape -s 'a' -a 'href'
 ```
 
-#### Extract Table Data Using CSS Selectors
+#### Extract the HTML of all Links inside a Table
 
 ```sh
-curl 'https://en.wikipedia.org/wiki/List_of_sovereign_states' -s | scrape -e 'table.wikitable > tbody > tr > td > b > a'
+curl 'https://en.wikipedia.org/wiki/List_of_sovereign_states' -s | scrape -s 'table.wikitable > tbody > tr > td > b > a'
 ```
 
 #### Extract Specific Attributes
 
 ```sh
-curl 'https://example.com' -s | scrape -e 'img' -a 'src'
+curl 'https://books.toscrape.com/' -s | scrape -s 'img' -a 'src'
 ```
 
 #### Check Existence of Elements
 
 ```sh
-curl 'https://example.com' -s | scrape -e 'div#main-content' -x
+curl 'https://books.toscrape.com/' -s | scrape -s 'header' -x
 ```
 
-#### Process Raw HTML Input
+#### Extract Text Content
 
 ```sh
-cat raw_html_file.html | scrape -r -e '//div[@class="content"]'
+curl 'https://books.toscrape.com/' -s | scrape -s 'h3 a' -t
 ```
 
-#### Include HTML and BODY Tags in Output
+#### Schema Extraction
 
 ```sh
-curl 'https://example.com' -s | scrape -e 'p' -b
+curl -s "https://books.toscrape.com/" | scrape -s '.side_categories li a' -d '{
+    "content": "textContent",
+    "url": "href"
+}'
 ```
 
-#### Read HTML from a File
-
-```sh
-scrape -f input.html -e 'h1'
-```
+> [!Note]
+> The `-d` option allows you to define a schema (object in JSON format) to extract specific attributes or information from the selected elements. The result will have a JSON structure based on the schema provided.
 
 #### Extract Multiple Selectors
 
 ```sh
-scrape -e 'h1' -e 'h2' -e 'h3' -f page.html
+curl -s "https://books.toscrape.com/" | scrape -e '[
+	{"selector":"article.product_pod p.price_color",
+	"schema":{
+		"content":"textContent"
+		}
+	},
+	{"selector":"article.product_pod a",
+	"schema":{
+		"content":"textContent",
+		"url": "href"
+		}
+	}
+]'
 ```
 
-> [!Tip]
-> - CSS Selectors: If a selector is provided, it is automatically converted to XPath using `cssselect`.
-> - XPath Queries: XPath expressions can be used directly by prefixing them with `//`.
+> [!Note]
+> The `-e` option allows you to extract information from multiple selectors at once. Each selector can have its own schema for extracting attributes or text content. It's necessary to use the `schema` key to define how to extract the information from each selector.
 
-## `httpservedir`
+## `httpservepwd`
 
-This command serves static files from a specified directory over HTTP using Python's built-in HTTP server. It validates the port and directory before starting, and provides clear error messages for invalid input. Useful for quickly sharing files or hosting simple static sites from the CLI.
+This command starts a static HTTP server in the current working directory, serving files over HTTP. It is useful for quickly sharing files or directories without needing a full web server setup. It also has the ability to restart the server when a file changes.
 
-**Dependencies:** Bash, Python 3
+**Dependencies:** Python 3 reloadserver package.
 
 ### Usage
 
 ```sh
-httpservedir [PORT] [DIR]
-```
-
-### Arguments
-
-- `PORT`: Port number to serve on (default: `8000`). Must be between 1 and 65535.
-- `DIR`: Directory to serve (default: current working directory).
-
-### Features
-
-- Serves static files from any directory using Python's HTTP server
-- Validates port number and directory existence
-- Provides clear error messages for invalid input
-- Defaults to port 8000 and current directory if not specified
-- Integrates easily into CLI workflows
-
-### Examples
-
-#### Serve Current Directory on Default Port
-
-```sh
-httpservedir
+httpservepwd
 ```
 
 ## `plot`
