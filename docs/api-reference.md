@@ -389,38 +389,34 @@ httpservepwd
 
 ## `plot`
 
-This command generates various types of terminal plots (line, scatter, bar, time series) from JSON data using Python. It supports both ASCII and gnuplot-based visualizations, making it suitable for quick data exploration in the CLI. The script automatically detects the plot type and keys, and can read data from stdin or a file.
+This command generates various types of terminal plots (line, scatter, bar, time series) from JSON data. It uses ASCII based visualizations, making it suitable for quick data exploration in the CLI..
 
-**Dependencies:** Python 3, termplotlib, gnuplot (for some plot types)
+**Dependencies:** Deno and chartex package.
 
 ### Usage
 
 ```sh
-plot --type <plot_type> [--data <file>] [--xkey <key>] [--ykey <key>] [--title <title>]
+plot [DATA] [OPTIONS]
 ```
 
 ### Arguments
 
-- `-t`, `--type <plot_type>`: Type of plot to generate. Choices: `line`, `scatter`, `vertical_bar`, `horizontal_bar`, `time_series` (required)
-- `-d`, `--data <file>`: Input data in JSON format (default: stdin)
-- `-x`, `--xkey <key>`: Key for X-axis values in JSON data (default: `x`)
-- `-y`, `--ykey <key>`: Key for Y-axis values in JSON data (default: `y`)
-- `-T`, `--title <title>`: Title of the chart (optional)
+- `DATA`: Input data in JSON format (default: stdin). The data should be an array of objects with consistent keys.
 
-### Features
+### Options
 
-- Supports line, scatter, vertical bar, horizontal bar, and time series plots
-- Reads data from stdin or a file in JSON format
-- Uses termplotlib for ASCII plots and gnuplot for advanced terminal plots
-- Customizable axis keys and chart title
-- Validates input and provides error messages for invalid data
+- `-t`, `--type <type>`: Type of plot to generate (default: `line`). Options: `line`, `scatter`, `vertical_bar`, `horizontal_bar`, `time_series`.
+- `-x`, `--xkey <key>`: Key for x-axis values (required for most plots).
+- `-y`, `--ykey <key>`: Key for y-axis values (required for most plots).
+- `-T`, `--title <title>`: Title of the chart (default: `Plot`).
+- `-h`, `--help`: Show help message and exit.
 
 ### Examples
 
 #### Line Plot from JSON
 
 ```sh
-echo '[{"hours": 0, "sales": 0}, {"hours": 1, "sales": 2}]' | plot --type line --xkey "hours" --ykey "sales" --title "Sales Over Time"
+echo '[{"hours": 0, "sales": 0}, {"hours": 1, "sales": 2}]' | plot -t line -x "hours" -y "sales"
 ```
 
 #### Scatter Plot

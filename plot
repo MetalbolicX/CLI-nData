@@ -49,10 +49,10 @@ const showHelp = () =>
   console.log(`
 Usage: chart [options]
 Options:
-  -h, --help          Show this help message
-  -t, --type          Specify the type of chart (e.g., vertical_bar, line, pie)
   -d, --data          Provide data for the chart in JSON format
+  -h, --help          Show this help message
   -T, --Title         Set the title of the chart
+  -t, --type          Specify the type of chart (e.g., vertical_bar, line, pie)
   -x, --xkey          Specify the key for the x-axis
   -y, --ykey          Specify the key for the y-axis
   `);
@@ -61,10 +61,10 @@ const options = {
   boolean: ["help"],
   string: ["type", "data", "Title", "xkey", "ykey"],
   alias: {
-    h: "help",
-    t: "type",
     d: "data",
+    h: "help",
     T: "Title",
+    t: "type",
     x: "xkey",
     y: "ykey",
   },
