@@ -25,20 +25,16 @@ description: This document provides guidelines and best practices for writing Ty
 - To concatenate a string, always use template literals.
 - Have preference for the functional programming paradigm rather than the imperative one.
 - Have preference for the functional programming paradigm of immutability, higher order functions, pure functions, etc.
-- You can use the next `curry` function to simulate functional programming.
+- Use the next `pipe` or `compose` function to simulate functional programming.
 
 ```js
-const curry = (fn) => {
-  return function curried(...args) {
-    if (args.length >= fn.length) {
-      return fn(...args);
-    } else {
-      return function(...nextArgs) {
-        return curried(...args, ...nextArgs);
-      };
-    }
-  };
-};
+// Pipe function to compose functions from left to right
+const pipe = (...fns) => (x) =>
+  fns.reduce((v, f) => f(v), x);
+
+// Compose function to compose functions from right to left
+const compose = (...fns) => (x) =>
+  fns.reduceRight((v, f) => f(v), x);
 ```
 
 ## Variables
