@@ -8,6 +8,19 @@ import xPathToCss from "xpath-to-css";
 
 const XPATH_PREFIX = "//";
 
+/** * Utility function to handle try-catch with a function.
+ * @param {Function} fn - The function to execute.
+ * @returns {Array} An array containing the result or error.
+ */
+const tryCatch = (fn) => {
+  try {
+    const result = fn();
+    return [result, null];
+  } catch (err) {
+    return [null, err];
+  }
+};
+
 /**
  * Extracts data from elements using a schema object.
  * @param {HTMLElement[]} elements - The elements to extract from.
@@ -37,19 +50,18 @@ const extractWithSchema = (elements, schema) =>
 const parseHTML = async (args) => {
   // If --file is provided, read from file
   if (typeof args.file === "string" && args.file.trim().length > 0) {
-    try {
-      const fileContent = await Deno.readTextFile(args.file);
-      if (!fileContent.trim()) {
-        console.error(`Error: File '${args.file}' is empty.`);
-        Deno.exit(1);
-      }
-      return parse(fileContent);
-    } catch (err) {
+    const [fileContent, fileErr] = await tryCatch(() => Deno.readTextFile(args.file));
+    if (fileErr) {
       console.error(
-        `Error: Unable to read file '${args.file}'. ${err.message || err}`
+        `Error: Unable to read file '${args.file}'. ${fileErr.message || fileErr}`
       );
       Deno.exit(1);
     }
+    if (!fileContent.trim()) {
+      console.error(`Error: File '${args.file}' is empty.`);
+      Deno.exit(1);
+    }
+    return parse(fileContent);
   }
 
   // Otherwise, read from stdin
