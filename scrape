@@ -145,10 +145,8 @@ const handleExtracts = async (root, extractsStr, args) => {
  * @returns {Promise<void>}
  */
 const handleDataSchema = async (elements, schemaStr, selector, args) => {
-  let schema;
-  try {
-    schema = JSON.parse(schemaStr);
-  } catch (_err) {
+  const [schema, parseErr] = tryCatch(() => JSON.parse(schemaStr));
+  if (parseErr) {
     console.error("Error: Invalid JSON schema for --data flag.");
     Deno.exit(1);
   }
