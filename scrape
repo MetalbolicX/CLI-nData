@@ -5,21 +5,9 @@ import { parseArgs } from "@std/cli";
 import { readAll } from "@std/io";
 import { parse } from "node-html-parser";
 import xPathToCss from "xpath-to-css";
+import { tryCatch } from "./utils/js/error-handlers.mjs";
 
 const XPATH_PREFIX = "//";
-
-/** * Utility function to handle try-catch with a function.
- * @param {Function} fn - The function to execute.
- * @returns {Array} An array containing the result or error.
- */
-const tryCatch = (fn) => {
-  try {
-    const result = fn();
-    return [result, null];
-  } catch (err) {
-    return [null, err];
-  }
-};
 
 /**
  * Extracts data from elements using a schema object.
