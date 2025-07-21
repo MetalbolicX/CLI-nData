@@ -51,17 +51,47 @@ def show_help():
         """
 Usage: chart.py [options]
 Options:
-  -d, --data      Provide data for the chart in JSON format
-  -x, --xkey      Specify the key for the x-axis (date or category)
-  -y, --ykey      Specify the key for the y-axis (value)
-  --date-format   Specify the date format for the x-axis (default: %Y-%m-%d)
-  -t, --title     Set the chart title
-  --xlabel        Set the x-axis label
-  --ylabel        Set the y-axis label
-  --theme         Set the plot theme (default: dark)
-  -h, --help      Show this help message
+    -b, --bins              Number of bins for histogram (default: 10)
+    -d, --data               Provide data for the chart in JSON format
+    -df, --date-format      Specify the date format for the x-axis (default: %Y-%m-%d)
+    -h, --help               Show this help message
+    -T, --title              Set the chart title
+    -t, --type               Specify the type of chart (time_series, histogram)
+    -th, --theme            Set the plot theme (default: dark)
+    -x, --xkey               Specify the key for the x-axis (date or category)
+    -xlb, --xlabel           Set the x-axis label
+    -y, --ykey               Specify the key for the y-axis (value)
+    -ylb, --ylabel           Set the y-axis label
         """
     )
+
+def plot_histogram(data: List[Dict[str, Any]], ykey: str, bins: int, title: str, xlabel: str, ylabel: str, theme: str):
+    """
+    Plot a histogram using plotext.
+    """
+    try:
+        values = []
+        for row in data:
+            y_val = row.get(ykey)
+            if y_val is not None:
+                try:
+                    values.append(float(y_val))
+                except Exception:
+                    continue
+        if not values:
+            print("Error: No valid data points for histogram.", file=sys.stderr)
+            sys.exit(1)
+        plt.clear_figure()
+        plt.hist(values, bins=bins)
+        if title:
+            plt.title(title)
+        plt.theme(theme or "dark")
+        plt.xlabel(xlabel or ykey)
+        plt.ylabel(ylabel or "Frequency")
+        plt.show()
+    except Exception as e:
+        print(f"Error: Failed to plot histogram. {e}", file=sys.stderr)
+        sys.exit(1)
 
 def plot_time_series(data: List[Dict[str, Any]], xkey: str, ykey: str, date_format: str, title: str, xlabel: str, ylabel: str, theme: str):
     """
@@ -111,11 +141,13 @@ def main():
     parser.add_argument("-d", "--data", type=str, help="JSON data string for the chart")
     parser.add_argument("-x", "--xkey", type=str, help="Key for the x-axis (date or category)")
     parser.add_argument("-y", "--ykey", type=str, help="Key for the y-axis (value)")
-    parser.add_argument("--date-format", type=str, default=DATE_FORMAT, help="Date format for x-axis (default: %%Y-%%m-%%d)")
-    parser.add_argument("-t", "--title", type=str, default="", help="Chart title")
-    parser.add_argument("--xlabel", type=str, default="", help="X-axis label")
-    parser.add_argument("--ylabel", type=str, default="", help="Y-axis label")
-    parser.add_argument("--theme", type=str, default="dark", help="Plot theme (default: dark)")
+    parser.add_argument("-df", "--date-format", type=str, default=DATE_FORMAT, help="Date format for x-axis (default: %%Y-%%m-%%d)")
+    parser.add_argument("-t", "--type", type=str, default="time_series", help="Type of chart (time_series, histogram)")
+    parser.add_argument("-T", "--title", type=str, default="", help="Chart title")
+    parser.add_argument("-xlb", "--xlabel", type=str, default="", help="X-axis label")
+    parser.add_argument("-ylb", "--ylabel", type=str, default="", help="Y-axis label")
+    parser.add_argument("-th", "--theme", type=str, default="dark", help="Plot theme (default: dark)")
+    parser.add_argument("-b", "--bins", type=int, default=10, help="Number of bins for histogram (default: 10)")
     parser.add_argument("-h", "--help", action="store_true", help="Show help message")
     args = parser.parse_args()
 
@@ -123,18 +155,36 @@ def main():
         show_help()
         sys.exit(0)
 
-    validate_chart_arguments(args)
     data = get_data_input(args)
-    plot_time_series(
-        data,
-        xkey=args.xkey,
-        ykey=args.ykey,
-        date_format=args.date_format,
-        title=args.title,
-        xlabel=args.xlabel,
-        ylabel=args.ylabel,
-        theme=args.theme,
-    )
+    chart_type = args.type.lower()
+    if chart_type == "time_series":
+        validate_chart_arguments(args)
+        plot_time_series(
+            data,
+            xkey=args.xkey,
+            ykey=args.ykey,
+            date_format=args.date_format,
+            title=args.title,
+            xlabel=args.xlabel,
+            ylabel=args.ylabel,
+            theme=args.theme,
+        )
+    elif chart_type == "histogram":
+        if not args.ykey:
+            print("Error: --ykey is required for histogram.", file=sys.stderr)
+            sys.exit(1)
+        plot_histogram(
+            data,
+            ykey=args.ykey,
+            bins=args.bins,
+            title=args.title,
+            xlabel=args.xlabel,
+            ylabel=args.ylabel,
+            theme=args.theme,
+        )
+    else:
+        print(f"Error: Unknown chart type '{args.type}'. Supported types: time_series, histogram.", file=sys.stderr)
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()
