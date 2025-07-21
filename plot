@@ -7,12 +7,10 @@ import {
   bullet,
   sparkline,
   transformChartData,
-  transformScatterData,
 } from "chartex";
-import { plot } from "simple-ascii-chart";
 import { tryCatch } from "./utils/js/error-handlers.mjs"
 
-const VALID_CHART_TYPES = ["vertical_bar", "line", "scatter", "horizontal_bar"];
+const VALID_CHART_TYPES = ["vertical_bar", "line", "horizontal_bar"];
 const WIDTH = 40;
 const HEIGHT = 15;
 
@@ -150,25 +148,10 @@ const renderHorizontalBarChart = (data, xkey, ykey) =>
     console.log
   )(data);
 
-/** * Renders a scatter chart.
- * @param data {Object[]} - The data to be visualized.
- * @param xkey {string} - The key for the x-axis.
- * @param ykey {string} - The key for the y-axis.
- * @returns {void} A void function that renders the chart.
- */
-const renderScatterChart = (data, xkey, ykey) =>
-  pipe(
-    (d) => transformScatterData(d, xkey, xkey, ykey),
-    (d) => d.map(({ value }) => value),
-    (points) => plot(points, { mode: "point", width: WIDTH, height: HEIGHT }),
-    console.log
-  )(data);
-
 const chartRenderers = {
   vertical_bar: renderVerticalBarChart,
   line: renderLineChart,
   horizontal_bar: renderHorizontalBarChart,
-  scatter: renderScatterChart,
 };
 
 /**

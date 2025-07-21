@@ -9,7 +9,6 @@
     "@std/io": "jsr:@std/io@^0.225.2",
     "chartex": "npm:chartex@^1.2.0",
     "node-html-parser": "npm:node-html-parser@^7.0.1",
-    "simple-ascii-chart": "npm:simple-ascii-chart@^5.3.0",
     "xpath-to-css": "npm:xpath-to-css@^1.2.0"
   }
 }
