@@ -10,6 +10,7 @@ import {
   transformScatterData,
 } from "chartex";
 import { plot } from "simple-ascii-chart";
+import { tryCatch } from "./utils/js/error-handlers.mjs"
 
 const VALID_CHART_TYPES = ["vertical_bar", "line", "scatter", "horizontal_bar"];
 const WIDTH = 40;
@@ -32,16 +33,15 @@ const pipe =
  * @returns {Promise<aObject[]>} The parsed data input.
  */
 const getDataInput = async (args) => {
-  // const getDataInput = async () => {
   if (typeof args.data === "string" && args.data.trim().length > 0) {
-    try {
-      return JSON.parse(args.data);
-    } catch (error) {
+    const [result, error] = await tryCatch(() => JSON.parse(args.data));
+    if (error) {
       console.error(
         `Error: Invalid JSON data provided in --data. ${error.message}`
       );
       Deno.exit(1);
     }
+    return result;
   }
 
   const buffer = await readAll(Deno.stdin);
@@ -52,14 +52,14 @@ const getDataInput = async (args) => {
     Deno.exit(1);
   }
 
-  try {
-    return JSON.parse(input);
-  } catch (error) {
+  const [result, error] = await tryCatch(() => JSON.parse(input));
+  if (error) {
     console.error(
       `Error: Invalid JSON data provided via stdin. ${error.message}`
     );
     Deno.exit(1);
   }
+  return result;
 };
 
 /** * Validates the chart arguments to ensure they are correct.
