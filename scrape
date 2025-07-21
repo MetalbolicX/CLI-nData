@@ -116,11 +116,8 @@ const options = {
  * @returns {Promise<void>}
  */
 const handleExtracts = async (root, extractsStr, args) => {
-  let extracts;
-  try {
-    extracts = JSON.parse(extractsStr);
-    if (!Array.isArray(extracts)) throw new Error();
-  } catch (_err) {
+  const [extracts, parseErr] = tryCatch(() => JSON.parse(extractsStr));
+  if (parseErr || !Array.isArray(extracts)) {
     console.error("Error: Invalid JSON array for --extracts flag.");
     Deno.exit(1);
   }
