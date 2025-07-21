@@ -214,10 +214,10 @@ const handleAttribute = async (elements, attribute, selector, args) => {
 const handleExistence = (elements, selector, _args) => {
   if (elements.length > 0) {
     Deno.exit(0);
-  } else {
-    console.error("No elements found for selector: " + selector);
-    Deno.exit(1);
+    return;
   }
+  console.error("No elements found for selector: " + selector);
+  Deno.exit(1);
 };
 
 /** * Handles the text extraction logic.
