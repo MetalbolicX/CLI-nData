@@ -42,7 +42,6 @@ const extractWithSchema = (elements, schema) =>
     return result;
   });
 
-
 /** Parses the HTML input from either a file or stdin.
  * @param {Object} args - The command line arguments.
  * @returns {Promise<HTMLElement>} The parsed HTML root element.
@@ -50,10 +49,14 @@ const extractWithSchema = (elements, schema) =>
 const parseHTML = async (args) => {
   // If --file is provided, read from file
   if (typeof args.file === "string" && args.file.trim().length > 0) {
-    const [fileContent, fileErr] = await tryCatch(() => Deno.readTextFile(args.file));
+    const [fileContent, fileErr] = await tryCatch(() =>
+      Deno.readTextFile(args.file)
+    );
     if (fileErr) {
       console.error(
-        `Error: Unable to read file '${args.file}'. ${fileErr.message || fileErr}`
+        `Error: Unable to read file '${args.file}'. ${
+          fileErr.message || fileErr
+        }`
       );
       Deno.exit(1);
     }
@@ -123,8 +126,14 @@ const handleExtracts = async (root, extractsStr, args) => {
   }
   const result = {};
   for (const extract of extracts) {
-    if (!extract.selector || !extract.schema || typeof extract.schema !== "object") {
-      console.error("Error: Each extract must have a selector and a schema object.");
+    if (
+      !extract.selector ||
+      !extract.schema ||
+      typeof extract.schema !== "object"
+    ) {
+      console.error(
+        "Error: Each extract must have a selector and a schema object."
+      );
       Deno.exit(1);
     }
     const selector = extract.selector.startsWith(XPATH_PREFIX)
@@ -163,18 +172,18 @@ const handleDataSchema = async (elements, schemaStr, selector, args) => {
  * @returns {Promise<void>}
  */
 const outputResult = async (result, args) => {
-  if (args.output) {
-    try {
-      await Deno.writeTextFile(args.output, result);
-    } catch (err) {
+  if (!args.output) {
+    console.log(result);
+    return;
+  }
+  await Promise.try(() => Deno.writeTextFile(args.output, result)).catch(
+    (err) => {
       console.error(
         `Error: Unable to write to file '${args.output}'. ${err.message || err}`
       );
       Deno.exit(1);
     }
-  } else {
-    console.log(result);
-  }
+  );
 };
 
 /** * Handles the attribute scraping logic.
@@ -238,7 +247,6 @@ const handleDefault = async (elements, selector, args) => {
   await outputResult(elements.toString(), args);
 };
 
-
 /**
  * Main function to parse arguments and render the chart.
  * @returns {void}
@@ -264,7 +272,6 @@ const main = async () => {
     const elements = root.removeWhitespace().querySelectorAll(selector);
     return { selector, elements };
   };
-
 
   // Strategy pattern: map flags to handler functions
   const strategies = {
