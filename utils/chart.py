@@ -240,7 +240,8 @@ def main() -> int:
             return ERROR_EXIT_CODE
 
         chart_type: str = args.type.lower()
-        if chart_type == "time_series":
+        # Strategy pattern: map chart type to plotting function and argument builder
+        def time_series_strategy():
             if not validate_chart_arguments(args):
                 return ERROR_EXIT_CODE
             return plot_time_series(
@@ -253,7 +254,8 @@ def main() -> int:
                 ylabel=args.ylabel,
                 theme=args.theme,
             )
-        elif chart_type == "histogram":
+
+        def histogram_strategy():
             if not args.ykey:
                 print("Error: --ykey is required for histogram.", file=sys.stderr)
                 return ERROR_EXIT_CODE
@@ -266,7 +268,8 @@ def main() -> int:
                 ylabel=args.ylabel,
                 theme=args.theme,
             )
-        elif chart_type == "scatter":
+
+        def scatter_strategy():
             if not validate_chart_arguments(args):
                 return ERROR_EXIT_CODE
             return plot_scatter(
@@ -279,9 +282,18 @@ def main() -> int:
                 ylabel=args.ylabel,
                 theme=args.theme,
             )
-        else:
-            print(f"Error: Unknown chart type '{args.type}'. Supported types: time_series, histogram, scatter.", file=sys.stderr)
+
+        plot_strategies = {
+            "time_series": time_series_strategy,
+            "histogram": histogram_strategy,
+            "scatter": scatter_strategy,
+        }
+
+        strategy = plot_strategies.get(chart_type)
+        if strategy is None:
+            print(f"Error: Unknown chart type '{args.type}'. Supported types: {', '.join(plot_strategies.keys())}.", file=sys.stderr)
             return ERROR_EXIT_CODE
+        return strategy()
 
     except KeyboardInterrupt:
         print("\nInterrupted by user.", file=sys.stderr)
