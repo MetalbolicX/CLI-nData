@@ -154,6 +154,67 @@ def plot_time_series(
         print(f"Error: Failed to plot time series. {e}", file=sys.stderr)
         return ERROR_EXIT_CODE
 
+# ...existing code...
+
+def plot_scatter(
+    data: List[Dict[str, Any]],
+    xkey: str,
+    ykey: str,
+    date_format: str,
+    title: str,
+    xlabel: str,
+    ylabel: str,
+    theme: str
+) -> int:
+    """
+    Plot a scatter plot using plotext.
+    """
+    try:
+        x_values: List[Any] = []
+        y_values: List[float] = []
+        is_date_x: bool = False
+
+        # Try to parse x as date if date_format is provided
+        for row in data:
+            x_val = row.get(xkey)
+            y_val = row.get(ykey)
+            if x_val is None or y_val is None:
+                continue
+            try:
+                # Try to parse as date
+                dt = datetime.strptime(str(x_val), date_format)
+                x_values.append(dt)
+                is_date_x = True
+            except Exception:
+                x_values.append(x_val)
+            try:
+                y_values.append(float(y_val))
+            except Exception:
+                continue
+
+        if not x_values or not y_values or len(x_values) != len(y_values):
+            print("Error: No valid data points for scatter plot.", file=sys.stderr)
+            return ERROR_EXIT_CODE
+
+        if is_date_x:
+            # Sort by date if x is date
+            combined = sorted(zip(x_values, y_values), key=lambda pair: pair[0])
+            x_values = [dt.strftime(date_format) for dt, _ in combined]
+            y_values = [val for _, val in combined]
+
+        plt.clear_figure()
+        plt.scatter(x_values, y_values)
+        if title:
+            plt.title(title)
+        plt.theme(theme or "dark")
+        plt.xlabel(xlabel or xkey)
+        plt.ylabel(ylabel or ykey)
+        plt.show()
+        return SUCCESS_EXIT_CODE
+    except Exception as e:
+        print(f"Error: Failed to plot scatter. {e}", file=sys.stderr)
+        return ERROR_EXIT_CODE
+
 def main() -> int:
     try:
         parser = argparse.ArgumentParser(add_help=False)
@@ -161,7 +222,7 @@ def main() -> int:
         parser.add_argument("-x", "--xkey", type=str, help="Key for the x-axis (date or category)")
         parser.add_argument("-y", "--ykey", type=str, help="Key for the y-axis (value)")
         parser.add_argument("-df", "--date-format", type=str, default=DATE_FORMAT, help="Date format for x-axis (default: %%Y-%%m-%%d)")
-        parser.add_argument("-t", "--type", type=str, default="time_series", help="Type of chart (time_series, histogram)")
+        parser.add_argument("-t", "--type", type=str, default="time_series", help="Type of chart (time_series, histogram, scatter)")
         parser.add_argument("-T", "--title", type=str, default="", help="Chart title")
         parser.add_argument("-xlb", "--xlabel", type=str, default="", help="X-axis label")
         parser.add_argument("-ylb", "--ylabel", type=str, default="", help="Y-axis label")
@@ -205,8 +266,21 @@ def main() -> int:
                 ylabel=args.ylabel,
                 theme=args.theme,
             )
+        elif chart_type == "scatter":
+            if not validate_chart_arguments(args):
+                return ERROR_EXIT_CODE
+            return plot_scatter(
+                data,
+                xkey=args.xkey,
+                ykey=args.ykey,
+                date_format=args.date_format,
+                title=args.title,
+                xlabel=args.xlabel,
+                ylabel=args.ylabel,
+                theme=args.theme,
+            )
         else:
-            print(f"Error: Unknown chart type '{args.type}'. Supported types: time_series, histogram.", file=sys.stderr)
+            print(f"Error: Unknown chart type '{args.type}'. Supported types: time_series, histogram, scatter.", file=sys.stderr)
             return ERROR_EXIT_CODE
 
     except KeyboardInterrupt:
