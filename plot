@@ -5,14 +5,14 @@ import { readAll } from "@std/io";
 import {
   bar,
   bullet,
+  scatter,
   sparkline,
-  transformChartData,
+  parseCategoricalData,
+  parseScatterData,
 } from "chartex";
-import { tryCatch } from "./utils/js/error-handlers.mjs"
+import { tryCatch } from "./utils/js/error-handlers.mjs";
 
-const VALID_CHART_TYPES = ["vertical_bar", "line", "horizontal_bar"];
-const WIDTH = 40;
-const HEIGHT = 15;
+const VALID_CHART_TYPES = ["vertical_bar", "line", "horizontal_bar", "scatter"];
 
 /** * A utility function to create a pipeline of functions.
  * It takes multiple functions as arguments and returns
@@ -116,8 +116,8 @@ const options = {
  */
 const renderVerticalBarChart = (data, xkey, ykey) =>
   pipe(
-    (d) => transformChartData(d, xkey, ykey),
-    (d) => bar(d, { width: WIDTH, height: HEIGHT }),
+    (d) => parseCategoricalData(d, xkey, ykey),
+    bar,
     console.log
   )(data);
 
@@ -130,8 +130,8 @@ const renderVerticalBarChart = (data, xkey, ykey) =>
  */
 const renderLineChart = (data, xkey, ykey) =>
   pipe(
-    (d) => transformChartData(d, xkey, ykey),
-    (d) => sparkline(d, { width: WIDTH, height: HEIGHT }),
+    (d) => parseCategoricalData(d, xkey, ykey),
+    sparkline,
     console.log
   )(data);
 
@@ -143,8 +143,21 @@ const renderLineChart = (data, xkey, ykey) =>
  */
 const renderHorizontalBarChart = (data, xkey, ykey) =>
   pipe(
-    (d) => transformChartData(d, xkey, ykey),
-    (d) => bullet(d, { width: WIDTH, height: HEIGHT }),
+    (d) => parseCategoricalData(d, xkey, ykey),
+    bullet,
+    console.log
+  )(data);
+
+/** * Renders a scatter chart.
+ * @param data {Object[]} - The data to be visualized.
+ * @param xkey {string} - The key for the x-axis.
+ * @param ykey {string} - The key for the y-axis.
+ * @returns {void} A void function that renders the chart.
+ */
+const renderScatterChart = (data, xkey, ykey) =>
+  pipe(
+    (d) => parseScatterData(d, xkey, xkey, ykey),
+    scatter,
     console.log
   )(data);
 
@@ -152,6 +165,7 @@ const chartRenderers = {
   vertical_bar: renderVerticalBarChart,
   line: renderLineChart,
   horizontal_bar: renderHorizontalBarChart,
+  scatter: renderScatterChart,
 };
 
 /**

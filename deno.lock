@@ -3,12 +3,12 @@
   "specifiers": {
     "jsr:@std/assert@1": "1.0.13",
     "jsr:@std/bytes@^1.0.5": "1.0.6",
-    "jsr:@std/cli@^1.0.20": "1.0.20",
+    "jsr:@std/cli@^1.0.21": "1.0.21",
     "jsr:@std/csv@^1.0.6": "1.0.6",
     "jsr:@std/internal@^1.0.6": "1.0.9",
     "jsr:@std/io@~0.225.2": "0.225.2",
     "jsr:@std/streams@^1.0.9": "1.0.10",
-    "npm:chartex@^1.2.0": "1.2.0",
+    "npm:chartex@^1.4.0": "1.4.0",
     "npm:node-html-parser@^7.0.1": "7.0.1",
     "npm:xpath-to-css@^1.2.0": "1.2.0"
   },
@@ -22,8 +22,8 @@
     "@std/bytes@1.0.6": {
       "integrity": "f6ac6adbd8ccd99314045f5703e23af0a68d7f7e58364b47d2c7f408aeb5820a"
     },
-    "@std/cli@1.0.20": {
-      "integrity": "a8c384a2c98cec6ec6a2055c273a916e2772485eb784af0db004c5ab8ba52333"
+    "@std/cli@1.0.21": {
+      "integrity": "cd25b050bdf6282e321854e3822bee624f07aca7636a3a76d95f77a3a919ca2a"
     },
     "@std/csv@1.0.6": {
       "integrity": "52ef0e62799a0028d278fa04762f17f9bd263fad9a8e7f98c14fbd371d62d9fd",
@@ -48,8 +48,8 @@
     "boolbase@1.0.0": {
       "integrity": "sha512-JZOSA7Mo9sNGB8+UjSgzdLtokWAky1zbztM3WRLCbZ70/3cTANmQmOdR7y2g+J0e2WXywy1yS468tY+IruqEww=="
     },
-    "chartex@1.2.0": {
-      "integrity": "sha512-GCI72XxnOWWcRrtd6rmPkctcd6uy1hUm/gyHIbGPhwVnCs9RwzjR9F8TtU3JCk/KIelIt0vV8qcGp8yjjTKyjw=="
+    "chartex@1.4.0": {
+      "integrity": "sha512-wUQVceePWi16/58vEEOjWtB7qEFRGk0hjDLkK58bxXhy5S6Tf3A2b/rHF6sS7UQVwHNqTziaN8gxTaCXR366YQ=="
     },
     "css-select@5.2.2": {
       "integrity": "sha512-TizTzUddG/xYLA3NXodFM0fSbNizXjOKhqiQQwvhlspadZokn1KDy0NZFS0wuEubIYAV5/c1/lAr0TaaFXEXzw==",
@@ -116,10 +116,10 @@
   "workspace": {
     "dependencies": [
       "jsr:@std/assert@1",
-      "jsr:@std/cli@^1.0.20",
+      "jsr:@std/cli@^1.0.21",
       "jsr:@std/csv@^1.0.6",
       "jsr:@std/io@~0.225.2",
-      "npm:chartex@^1.2.0",
+      "npm:chartex@^1.4.0",
       "npm:node-html-parser@^7.0.1",
       "npm:xpath-to-css@^1.2.0"
     ]
