@@ -38,72 +38,68 @@ seq 10 | header -a 'values' | body sort -nr
 seq 10 | header -a 'multi\nline\nheader' | body body body sort -nr
 ```
 
-#### Capitalize each value in the body using Ruby
-
-```sh
-printf "first_name\njim\nbob\nmary\n" | body ruby -nle 'puts $_.capitalize'
-```
-
 #### Use with awk to filter values
 
 ```sh
 printf "name,score\nAlice,90\nBob,80\nCarol,95\n" | body awk -F, '$2 > 85'
 ```
 
-## `cols`
+## `chart`
 
-This command applies a shell command to a subset of columns in a CSV file and merges the result back with the remaining columns. It is useful for transforming, filtering, or analyzing specific columns while preserving the overall structure. The input must be comma-delimited and have a header. Supports selecting columns to include or exclude, and works with any command that reads from stdin.
+This command generates terminal-based charts from JSON data, supporting time series, histogram, and scatter plots. It is useful for visualizing data directly in the CLI using ASCII graphics.
 
-**Dependencies:** Bash, csvkit (`csvcut`), paste, tee, mktemp (standard Unix utilities)
+**Dependencies:** Python 3, plotext package
 
 ### Usage
 
 ```sh
-cols <column_arg> <columns> <command> [args...]
+chart [options]
 ```
-
-### Arguments
-
-- `<column_arg>`: Column selection argument (`-c` to select specified columns, `-C` to select all except specified columns)
-- `<columns>`: Column names or numbers to select or exclude
-- `<command> [args...]`: Shell command to apply to the selected columns
 
 ### Options
 
-- `-h`, `--help`: Show help message and exit
-
-### Features
-
-- Select columns to process or exclude using `-c` or `-C`
-- Applies any shell command to the selected columns
-- Merges processed columns back with the remaining columns
-- Handles temporary files securely and cleans up after execution
-- Validates dependencies and arguments for robust error handling
+- `-b, --bins <number>`: Number of bins for histogram (default: 10)
+- `-d, --data <json>`: Provide data for the chart in JSON format (if not provided, reads from stdin)
+- `-df, --date-format <format>`: Specify the date format for the x-axis (default: `%Y-%m-%d`)
+- `-h, --help`: Show help message and exit
+- `-T, --title <title>`: Set the chart title
+- `-t, --type <type>`: Specify the type of chart (`time_series`, `histogram`, `scatter`)
+- `-th, --theme <theme>`: Set the plot theme (default: `dark`)
+- `-x, --xkey <key>`: Specify the key for the x-axis (date or category)
+- `-xlb, --xlabel <label>`: Set the x-axis label
+- `-y, --ykey <key>`: Specify the key for the y-axis (value)
+- `-ylb, --ylabel <label>`: Set the y-axis label
 
 ### Examples
 
-#### Reverse sort column 'a'
+#### Time Series Plot from JSON
 
 ```sh
-echo 'a,b\n1,2\n3,4\n5,6' | cols -c a body sort -nr
+echo '[{"date": "2024-01-01", "value": 10}, {"date": "2024-01-02", "value": 15}]' | chart -t time_series -x date -y value
 ```
 
-#### Apply PCA to all numerical features except 'species' (using tapkee)
+#### Histogram Plot
 
 ```sh
-< iris.csv cols -C species body tapkee --method pca | header -r x,y,species
+echo '[{"score": 1}, {"score": 2}, {"score": 2}, {"score": 3}]' | chart -t histogram -y score -b 3
 ```
 
-#### Select and uppercase a column
+#### Scatter Plot
 
 ```sh
-echo 'name,score\nAlice,90\nBob,80' | cols -c name body awk '{print toupper($0)}'
+echo '[{"x": 1, "y": 2}, {"x": 2, "y": 3}]' | chart -t scatter -x x -y y
 ```
 
-#### Exclude a column and process the rest
+#### Custom Date Format and Theme
 
 ```sh
-echo 'id,value,flag\n1,10,A\n2,20,B' | cols -C flag body awk -F, '{print $1+$2}'
+echo '[{"dt": "01/01/2024", "val": 5}, {"dt": "01/02/2024", "val": 7}]' | chart -t time_series -x dt -y val -df "%m/%d/%Y" -th light
+```
+
+#### Show Help Message
+
+```sh
+chart --help
 ```
 
 ## `csv2html`
@@ -283,6 +279,68 @@ seq 10 | header -a 'values' | header -d
 seq 10 | header -a 'multi\nline' | header -n 2 -e "paste -sd_"
 ```
 
+## `httpservepwd`
+
+This command starts a static HTTP server in the current working directory, serving files over HTTP. It is useful for quickly sharing files or directories without needing a full web server setup. It also has the ability to restart the server when a file changes.
+
+**Dependencies:** Python 3 reloadserver package.
+
+### Usage
+
+```sh
+httpservepwd
+```
+
+## `plot`
+
+This command generates various types of terminal plots (line, scatter, bar, time series) from JSON data. It uses ASCII based visualizations, making it suitable for quick data exploration in the CLI..
+
+**Dependencies:** Deno and chartex package.
+
+### Usage
+
+```sh
+plot [DATA] [OPTIONS]
+```
+
+### Arguments
+
+- `DATA`: Input data in JSON format (default: stdin). The data should be an array of objects with consistent keys.
+
+### Options
+
+- `-t`, `--type <type>`: Type of plot to generate (default: `line`). Options: `line`, `scatter`, `vertical_bar`, `horizontal_bar`, `time_series`.
+- `-x`, `--xkey <key>`: Key for x-axis values (required for most plots).
+- `-y`, `--ykey <key>`: Key for y-axis values (required for most plots).
+- `-T`, `--title <title>`: Title of the chart (default: `Plot`).
+- `-h`, `--help`: Show help message and exit.
+
+### Examples
+
+#### Line Plot from JSON
+
+```sh
+echo '[{"hours": 0, "sales": 0}, {"hours": 1, "sales": 2}]' | plot -t line -x "hours" -y "sales"
+```
+
+#### Scatter Plot
+
+```sh
+echo '[{"x": 1, "y": 2}, {"x": 2, "y": 3}]' | plot --type scatter --xkey "x" --ykey "y"
+```
+
+#### Vertical Bar Chart
+
+```sh
+echo '[{"category": "A", "value": 10}, {"category": "B", "value": 20}]' | plot --type vertical_bar --xkey "category" --ykey "value"
+```
+
+#### Horizontal Bar Chart
+
+```sh
+echo '[{"label": "X", "score": 5}, {"label": "Y", "score": 8}]' | plot --type horizontal_bar --xkey "label" --ykey "score"
+```
+
 ## `scrape`
 
 This command extracts information from a HTML document. It supports XPath or CSS selectors to specify which elements to extract, and can output specific attributes from those elements.
@@ -375,67 +433,79 @@ curl -s "https://books.toscrape.com/" | scrape -e '[
 > [!Note]
 > The `-e` option allows you to extract information from multiple selectors at once. Each selector can have its own schema for extracting attributes or text content. It's necessary to use the `schema` key to define how to extract the information from each selector.
 
-## `httpservepwd`
+## `tablify`
 
-This command starts a static HTTP server in the current working directory, serving files over HTTP. It is useful for quickly sharing files or directories without needing a full web server setup. It also has the ability to restart the server when a file changes.
+This command formats tabular data from a file or standard input into a human-readable table format.
 
-**Dependencies:** Python 3 reloadserver package.
-
-### Usage
-
-```sh
-httpservepwd
-```
-
-## `plot`
-
-This command generates various types of terminal plots (line, scatter, bar, time series) from JSON data. It uses ASCII based visualizations, making it suitable for quick data exploration in the CLI..
-
-**Dependencies:** Deno and chartex package.
+**Dependencies:** Python 3, tabulate package.
 
 ### Usage
 
 ```sh
-plot [DATA] [OPTIONS]
+tablify [options] [FILE]
 ```
 
 ### Arguments
 
-- `DATA`: Input data in JSON format (default: stdin). The data should be an array of objects with consistent keys.
+- `FILE`: The file containing tabular data to format. If not specified or set to `-`, reads from standard input.
 
 ### Options
 
-- `-t`, `--type <type>`: Type of plot to generate (default: `line`). Options: `line`, `scatter`, `vertical_bar`, `horizontal_bar`, `time_series`.
-- `-x`, `--xkey <key>`: Key for x-axis values (required for most plots).
-- `-y`, `--ykey <key>`: Key for y-axis values (required for most plots).
-- `-T`, `--title <title>`: Title of the chart (default: `Plot`).
-- `-h`, `--help`: Show help message and exit.
+- `-H`, `--header`: Use the first row of data as a table header.
+- `-o, --output <file>`: Print table to a file instead of stdout.
+- `-s, --sep <regexp>`: Use a custom column separator (regular expression). Default: whitespace.
+- `-F, --float <format>`: Floating point number format (default: `g`).
+- `-I, --int <format>`: Integer number format (default: '').
+- `-f, --format <fmt>`: Set output table format (default: `simple`). See tabulate documentation for available formats.
+- `-h, --help`: Show help message and exit.
 
 ### Examples
 
-#### Line Plot from JSON
+#### Format a CSV file with headers
 
 ```sh
-echo '[{"hours": 0, "sales": 0}, {"hours": 1, "sales": 2}]' | plot -t line -x "hours" -y "sales"
+tablify -H -s ',' data.csv
 ```
 
-#### Scatter Plot
+#### Format tabular data from stdin
 
 ```sh
-echo '[{"x": 1, "y": 2}, {"x": 2, "y": 3}]' | plot --type scatter --xkey "x" --ykey "y"
+cat data.txt | tablify
 ```
 
-#### Vertical Bar Chart
+#### Output to a file in grid format
 
 ```sh
-echo '[{"category": "A", "value": 10}, {"category": "B", "value": 20}]' | plot --type vertical_bar --xkey "category" --ykey "value"
+tablify -H -f grid -o table.txt data.tsv
 ```
 
-#### Horizontal Bar Chart
+#### Use a custom separator (tab)
 
 ```sh
-echo '[{"label": "X", "score": 5}, {"label": "Y", "score": 8}]' | plot --type horizontal_bar --xkey "label" --ykey "score"
+tablify -s '\t' data.tsv
 ```
+
+#### Format floating point numbers with 2 decimals
+
+```sh
+tablify -H -F '.2f' data.csv
+```
+
+#### Use a regular expression separator (multiple spaces or comma)
+
+```sh
+tablify -s '[ ,]+' data.txt
+```
+
+#### Show help message
+
+```sh
+tablify --help
+```
+
+>[!Note]
+> For more information on available formats, refer to the [tabulate documentation](https://pypi.org/project/tabulate/).
+
 
 ## `trim`
 
