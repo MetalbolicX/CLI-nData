@@ -10,12 +10,13 @@ SUCCESS_EXIT_CODE: int = 0
 ERROR_EXIT_CODE: int = 1
 
 def parse_arguments() -> argparse.Namespace:
+    """Parse command line arguments for the tablify script."""
     parser = argparse.ArgumentParser(
         description="Format tabular data using the tabulate package.",
         add_help=False
     )
     parser.add_argument("file", nargs="?", default="-", help="a filename of the file with tabular data; if '-' or missing, read data from stdin.")
-    parser.add_argument("-1", "--header", action="store_true", help="use the first row of data as a table header")
+    parser.add_argument("-H", "--header", action="store_true", help="use the first row of data as a table header")
     parser.add_argument("-o", "--output", metavar="FILE", help="print table to FILE (default: stdout)")
     parser.add_argument("-s", "--sep", metavar="REGEXP", default=None, help="use a custom column separator (default: whitespace)")
     parser.add_argument("-F", "--float", dest="float_fmt", metavar="FPFMT", default="g", help="floating point number format (default: g)")
@@ -24,9 +25,16 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument("-h", "--help", action="store_true", help="show this message")
     return parser.parse_args()
 
-
-
 def read_data(file: str, sep: str | None) -> list[list[str]]:
+    """Read tabular data from a file or stdin.
+
+    Args:
+        file (str): The filename to read data from, or '-' to read from stdin.
+        sep (str | None): A regular expression to use as a custom column separator.
+
+    Returns:
+        list[list[str]]: The tabular data as a list of rows, each row being a list of strings.
+    """
     import re
     try:
         if file == "-":
@@ -48,14 +56,13 @@ def read_data(file: str, sep: str | None) -> list[list[str]]:
         print(f"Error: Failed to read data. {e}", file=sys.stderr)
         return []
 
-
-
 def show_help() -> None:
+    """Display the help message for the tablify script."""
     print(
         """
 Usage: tablify.py [options] [FILE]
 Options:
-    -1, --header              use the first row of data as a table header
+    -H, --header              use the first row of data as a table header
     -o FILE, --output FILE    print table to FILE (default: stdout)
     -s REGEXP, --sep REGEXP   use a custom column separator (default: whitespace)
     -F FPFMT, --float FPFMT   floating point number format (default: g)
@@ -67,6 +74,7 @@ Options:
     )
 
 def main() -> int:
+    """Main function to parse arguments, read data, and print the formatted table."""
     try:
         args = parse_arguments()
         if args.help:
