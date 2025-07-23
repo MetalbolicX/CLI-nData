@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# Updated tablify script
+readonly UTILS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/utils"
+exec "$UTILS_DIR/python-runner" "tablify" "$@"
