@@ -8,7 +8,7 @@
     "jsr:@std/internal@^1.0.6": "1.0.9",
     "jsr:@std/io@~0.225.2": "0.225.2",
     "jsr:@std/streams@^1.0.9": "1.0.10",
-    "npm:chartex@^1.4.0": "1.4.0",
+    "npm:chartex@^1.4.1": "1.4.1",
     "npm:node-html-parser@^7.0.1": "7.0.1",
     "npm:xpath-to-css@^1.2.0": "1.2.0"
   },
@@ -48,8 +48,8 @@
     "boolbase@1.0.0": {
       "integrity": "sha512-JZOSA7Mo9sNGB8+UjSgzdLtokWAky1zbztM3WRLCbZ70/3cTANmQmOdR7y2g+J0e2WXywy1yS468tY+IruqEww=="
     },
-    "chartex@1.4.0": {
-      "integrity": "sha512-wUQVceePWi16/58vEEOjWtB7qEFRGk0hjDLkK58bxXhy5S6Tf3A2b/rHF6sS7UQVwHNqTziaN8gxTaCXR366YQ=="
+    "chartex@1.4.1": {
+      "integrity": "sha512-xkds2vUq26iF7ApojrwPnbUA7uBhk13ROOL8V9iHQhG5MmPgBAapvkZTRmHNiMEMmLWKj7TQzX6Tr3thpM+sZw=="
     },
     "css-select@5.2.2": {
       "integrity": "sha512-TizTzUddG/xYLA3NXodFM0fSbNizXjOKhqiQQwvhlspadZokn1KDy0NZFS0wuEubIYAV5/c1/lAr0TaaFXEXzw==",
@@ -119,7 +119,7 @@
       "jsr:@std/cli@^1.0.21",
       "jsr:@std/csv@^1.0.6",
       "jsr:@std/io@~0.225.2",
-      "npm:chartex@^1.4.0",
+      "npm:chartex@^1.4.1",
       "npm:node-html-parser@^7.0.1",
       "npm:xpath-to-css@^1.2.0"
     ]

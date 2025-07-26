@@ -7,7 +7,7 @@
     "@std/cli": "jsr:@std/cli@^1.0.21",
     "@std/csv": "jsr:@std/csv@^1.0.6",
     "@std/io": "jsr:@std/io@^0.225.2",
-    "chartex": "npm:chartex@^1.4.0",
+    "chartex": "npm:chartex@^1.4.1",
     "node-html-parser": "npm:node-html-parser@^7.0.1",
     "xpath-to-css": "npm:xpath-to-css@^1.2.0"
   }
