@@ -105,13 +105,12 @@ const log = (message: string, level: Config["logLevel"] = "info"): void => {
 const shouldIgnoreEvent = (
   event: Deno.FsEvent,
   ignorePatterns: string[]
-): boolean => {
-  return event.paths.some((path) =>
+): boolean =>
+  event.paths.some((path) =>
     ignorePatterns.some(
       (pattern) => path.includes(pattern) || path.endsWith(pattern)
     )
   );
-};
 
 const shouldRestartServer = (filePaths: string[]): boolean => {
   // Files that should trigger server restart (server configuration, executable changes)
@@ -194,14 +193,11 @@ const resolveSafePath = (
   }
 };
 
-const getMimeType = (filePath: string): string => {
-  return (
-    contentType(filePath.split(".").at(-1) || "") || "application/octet-stream"
-  );
-};
+const getMimeType = (filePath: string): string =>
+  contentType(filePath.split(".").at(-1) || "") || "application/octet-stream";
 
 const getLiveReloadScript = (port: number): string => {
-  return `
+  return /*html*/ `
 <script>
 (function() {
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -267,15 +263,15 @@ const generateDirectoryListingHTML = (
     })
     .join("<br>");
 
-  return `
+  return /*html*/ `
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
   <title>Directory listing for ${urlPath}</title>
   <style>
-    body { font-family: monospace; margin: 40px; font-size: 1.5em; }
-    a { text-decoration: none; color: #0066cc; }
+    body { font-family: monospace; margin: 3em; font-size: 1.2em; }
+    a { text-decoration: none; color: #06c; }
     a:hover { text-decoration: underline; }
     h1 { border-bottom: 1px solid #ccc; }
   </style>
