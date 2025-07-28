@@ -281,7 +281,7 @@ seq 10 | header -a 'multi\nline' | header -n 2 -e "paste -sd_"
 
 ## `httpservepwd`
 
-To do y hola de nuevo que onda
+To do y hola
 
 This command starts a static HTTP server in the current working directory, serving files over HTTP. It is useful for quickly sharing files or directories without needing a full web server setup. It also has the ability to restart the server when a file changes.
 

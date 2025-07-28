@@ -30,6 +30,7 @@ const DEFAULT_CONFIG: Config = {
 };
 
 let debounceTimeout: number | null = null;
+let isProcessingChange = false;
 const liveReloadClients = new Set<WebSocket>();
 
 const parseArguments = (args: string[]): Config => {
@@ -158,10 +159,17 @@ const shouldTriggerBrowserReload = (filePaths: string[]): boolean => {
 
 const debounce = (ms: number): Promise<void> => {
   return new Promise((resolve) => {
-    if (debounceTimeout) {
+    // Clear any existing timeout
+    if (debounceTimeout !== null) {
       clearTimeout(debounceTimeout);
+      debounceTimeout = null;
     }
-    debounceTimeout = setTimeout(resolve, ms);
+
+    // Set new timeout
+    debounceTimeout = setTimeout(() => {
+      debounceTimeout = null;
+      resolve();
+    }, ms);
   });
 };
 
@@ -303,14 +311,37 @@ const handleWebSocket = (request: Request): Response => {
 };
 
 const notifyLiveReloadClients = (reason = "file change"): void => {
+  if (liveReloadClients.size === 0) {
+    log(`No live reload clients connected`, "debug");
+    return;
+  }
+
+  let successCount = 0;
+  const clientsToRemove: WebSocket[] = [];
+
   for (const client of liveReloadClients) {
     try {
-      client.send("reload");
-    } catch {
-      liveReloadClients.delete(client);
+      if (client.readyState === WebSocket.OPEN) {
+        client.send("reload");
+        successCount++;
+      } else {
+        // Client is not in OPEN state, mark for removal
+        clientsToRemove.push(client);
+      }
+    } catch (error) {
+      // Client connection failed, mark for removal
+      clientsToRemove.push(client);
+      log(`Failed to send reload signal to client: ${error}`, "debug");
     }
   }
-  log(`Sent reload signal to ${liveReloadClients.size} clients (${reason})`, "info");
+
+  // Remove stale clients
+  clientsToRemove.forEach(client => liveReloadClients.delete(client));
+
+  log(`Sent reload signal to ${successCount} clients (${reason})`, "info");
+  if (clientsToRemove.length > 0) {
+    log(`Removed ${clientsToRemove.length} stale client connections`, "debug");
+  }
 };
 
 const serveFile = async (filePath: string, config: Config): Promise<Response> => {
@@ -443,40 +474,59 @@ const startFileWatcher = async (
 
     if (shouldIgnoreEvent(event, config.ignorePatterns)) continue;
 
+    // Skip if we're already processing a change
+    if (isProcessingChange) {
+      log(`Skipping duplicate file change event: ${event.kind} - ${event.paths.join(", ")}`, "debug");
+      continue;
+    }
+
     log(`File change detected: ${event.kind} - ${event.paths.join(", ")}`);
 
-    // Debounce rapid changes
-    await debounce(500);
+    // Set processing flag to prevent duplicate events
+    isProcessingChange = true;
 
-    if (abortController.signal.aborted) continue;
+    try {
+      // Debounce rapid changes
+      await debounce(500);
 
-    // Determine action based on configuration and file types
-    if (config.restartOnChange) {
-      // Legacy mode: always restart server
-      if (config.enableLiveReload) {
-        notifyLiveReloadClients("server restart");
-        await new Promise(resolve => setTimeout(resolve, 100));
-      }
-      reloadServer();
-    } else {
-      // Smart mode: decide based on file types
-      const shouldRestart = shouldRestartServer(event.paths);
-      const shouldReload = shouldTriggerBrowserReload(event.paths);
+      if (abortController.signal.aborted) continue;
 
-      if (shouldRestart) {
-        log("Server configuration files changed, restarting server...");
+      // Determine action based on configuration and file types
+      if (config.restartOnChange) {
+        // Legacy mode: always restart server
+        log("Legacy mode: Restarting server for any file change");
         if (config.enableLiveReload) {
           notifyLiveReloadClients("server restart");
           await new Promise(resolve => setTimeout(resolve, 100));
         }
         reloadServer();
-      } else if (shouldReload && config.enableLiveReload) {
-        log("Frontend files changed, triggering browser reload...");
-        notifyLiveReloadClients("frontend change");
-        // Note: Server stays alive, only browsers reload
       } else {
-        log("File change detected but no action taken (not a monitored file type)");
+        // Smart mode: decide based on file types
+        const shouldRestart = shouldRestartServer(event.paths);
+        const shouldReload = shouldTriggerBrowserReload(event.paths);
+
+        log(`File analysis: restart=${shouldRestart}, reload=${shouldReload}`, "debug");
+
+        if (shouldRestart) {
+          log("Server configuration files changed, restarting server...");
+          if (config.enableLiveReload) {
+            notifyLiveReloadClients("server restart");
+            await new Promise(resolve => setTimeout(resolve, 100));
+          }
+          reloadServer();
+        } else if (shouldReload && config.enableLiveReload) {
+          log("Frontend files changed, triggering browser reload...");
+          notifyLiveReloadClients("frontend change");
+          // Note: Server stays alive, only browsers reload
+        } else {
+          log("File change detected but no action taken (not a monitored file type)");
+        }
       }
+    } finally {
+      // Reset processing flag after a delay to allow for any remaining events to be ignored
+      setTimeout(() => {
+        isProcessingChange = false;
+      }, 1000);
     }
   }
 };
