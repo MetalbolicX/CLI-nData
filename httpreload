@@ -96,12 +96,24 @@ Examples:
   };
 };
 
+/**
+ * Logs a message to the console.
+ * @param message - The message to log
+ * @param level - The log level (info, debug, error)
+ * @returns void
+ */
 const log = (message: string, level: Config["logLevel"] = "info"): void => {
   const timestamp = new Date().toISOString();
   const prefix = level.toUpperCase().padEnd(5);
   console.log(`[${timestamp}] ${prefix} ${message}`);
 };
 
+/**
+ * Checks if a file change event should be ignored based on ignore patterns.
+ * @param event - The file system event
+ * @param ignorePatterns - Patterns to ignore
+ * @returns True if the event should be ignored, false otherwise
+ */
 const shouldIgnoreEvent = (
   event: Deno.FsEvent,
   ignorePatterns: string[]
@@ -112,6 +124,11 @@ const shouldIgnoreEvent = (
     )
   );
 
+/**
+ * Determines if the server should be restarted based on changed file paths.
+ * @param filePaths - The list of changed file paths
+ * @returns True if the server should be restarted, false otherwise
+ */
 const shouldRestartServer = (filePaths: string[]): boolean => {
   // Files that should trigger server restart (server configuration, executable changes)
   const serverRestartPatterns = [
@@ -132,6 +149,11 @@ const shouldRestartServer = (filePaths: string[]): boolean => {
   );
 };
 
+/**
+ * Checks if the server should trigger a browser reload based on changed file paths.
+ * @param filePaths - The list of changed file paths
+ * @returns True if the server should trigger a browser reload, false otherwise
+ */
 const shouldTriggerBrowserReload = (filePaths: string[]): boolean => {
   // Files that should trigger browser reload (frontend assets)
   const browserReloadPatterns = [
@@ -156,6 +178,11 @@ const shouldTriggerBrowserReload = (filePaths: string[]): boolean => {
   );
 };
 
+/**
+ * Debounces a function call to prevent rapid successive calls.
+ * @param ms - The debounce delay in milliseconds
+ * @returns A promise that resolves after the delay
+ */
 const debounce = (ms: number): Promise<void> => {
   return new Promise((resolve) => {
     // Clear any existing timeout
@@ -172,6 +199,12 @@ const debounce = (ms: number): Promise<void> => {
   });
 };
 
+/**
+ * Resolves a safe path within the base directory, preventing directory traversal attacks.
+ * @param baseDir - The base directory to resolve against
+ * @param requestPath - The requested path
+ * @returns The resolved path or null if it's outside the base directory
+ */
 const resolveSafePath = (
   baseDir: string,
   requestPath: string
@@ -193,11 +226,21 @@ const resolveSafePath = (
   }
 };
 
+/**
+ * Gets the MIME type for a file based on its extension.
+ * @param filePath - The path of the file to get the MIME type for
+ * @returns The MIME type of the file
+ */
 const getMimeType = (filePath: string): string =>
   contentType(filePath.split(".").at(-1) || "") || "application/octet-stream";
 
+/**
+ * Generates the live reload script for the client.
+ * @param port - The port number for the WebSocket connection
+ * @returns The live reload script as a string
+ */
 const getLiveReloadScript = (port: number): string => {
-  return /*html*/ `
+  return `
 <script>
 (() => {
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -233,6 +276,12 @@ const getLiveReloadScript = (port: number): string => {
 </script>`;
 };
 
+/**
+ * Injects the live reload script into an HTML document.
+ * @param html - The original HTML content
+ * @param port - The port number for the WebSocket connection
+ * @returns The modified HTML content with the live reload script injected
+ */
 const injectLiveReloadScript = (html: string, port: number): string => {
   const script = getLiveReloadScript(port);
   if (html.includes("</body>")) {
@@ -244,6 +293,12 @@ const injectLiveReloadScript = (html: string, port: number): string => {
   }
 };
 
+/**
+ * Generates the HTML for a directory listing.
+ * @param entries - The list of file entries in the directory
+ * @param urlPath - The URL path for the directory
+ * @returns The HTML string for the directory listing
+ */
 const generateDirectoryListingHTML = (
   entries: FileEntry[],
   urlPath: string
@@ -285,6 +340,11 @@ const generateDirectoryListingHTML = (
   `.trim();
 };
 
+/**
+ * Handles WebSocket connections for live reload.
+ * @param request - The incoming WebSocket upgrade request
+ * @returns The WebSocket response
+ */
 const handleWebSocket = (request: Request): Response => {
   const { socket, response } = Deno.upgradeWebSocket(request);
 
@@ -349,6 +409,12 @@ const notifyLiveReloadClients = (reason = "file change"): void => {
   }
 };
 
+/**
+ * Serves a file from the filesystem.
+ * @param filePath - The path of the file to serve
+ * @param config - The server configuration
+ * @returns The HTTP response for the file
+ */
 const serveFile = async (
   filePath: string,
   config: Config
@@ -382,6 +448,13 @@ const serveFile = async (
   });
 };
 
+/**
+ * Serves a directory listing as HTML.
+ * @param dirPath - The path of the directory to list
+ * @param urlPath - The URL path for the directory
+ * @param config - The server configuration
+ * @returns The HTTP response with the directory listing
+ */
 const serveDirectory = async (
   dirPath: string,
   urlPath: string,
@@ -409,8 +482,14 @@ const serveDirectory = async (
   });
 };
 
-const createRequestHandler = (config: Config) => {
-  return async (request: Request): Promise<Response> => {
+/**
+ * Creates a request handler for serving files and directories.
+ * @param config - The server configuration
+ * @returns The request handler function
+ */
+const createRequestHandler =
+  (config: Config) =>
+  async (request: Request): Promise<Response> => {
     const url = new URL(request.url);
     const pathname = decodeURIComponent(url.pathname);
 
@@ -462,8 +541,13 @@ const createRequestHandler = (config: Config) => {
 
     return new Response("Bad Request", { status: 400 });
   };
-};
 
+/**
+ * Starts the file watcher to monitor changes in the specified directory.
+ * @param config - The server configuration
+ * @param abortController - The AbortController to handle graceful shutdown
+ * @returns A promise that resolves when the watcher is started
+ */
 const startFileWatcher = async (
   config: Config,
   abortController: AbortController
@@ -549,6 +633,12 @@ const startFileWatcher = async (
   }
 };
 
+/**
+ * Starts the HTTP server to serve files and directories.
+ * @param config - The server configuration
+ * @param abortController - The AbortController to handle graceful shutdown
+ * @returns A promise that resolves when the server is started
+ */
 const startHttpServer = async (
   config: Config,
   abortController: AbortController
@@ -580,6 +670,11 @@ const reloadServer = (): void => {
   Deno.exit(0);
 };
 
+/**
+ * Sets up signal handlers for graceful shutdown.
+ * @param abortController - The AbortController to handle shutdown
+ * @returns void
+ */
 const setupSignalHandlers = (abortController: AbortController): void => {
   const signals = ["SIGINT", "SIGTERM"] as const;
 
