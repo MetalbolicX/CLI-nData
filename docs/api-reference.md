@@ -279,18 +279,71 @@ seq 10 | header -a 'values' | header -d
 seq 10 | header -a 'multi\nline' | header -n 2 -e "paste -sd_"
 ```
 
-## `httpservepwd`
+## `httpserve`
 
-To do y hola de nuevo
+This command starts a static HTTP server in the current working directory, serving files over HTTP. It supports directory listing, live reload for browsers, and can restart itself when files change. It is useful for quickly sharing files or directories without needing a full web server setup.
 
-This command starts a static HTTP server in the current working directory, serving files over HTTP. It is useful for quickly sharing files or directories without needing a full web server setup. It also has the ability to restart the server when a file changes.
-
-**Dependencies:** Python 3 reloadserver package.
+**Dependencies:** Deno (no external dependencies)
 
 ### Usage
 
 ```sh
-httpservepwd
+httpserve [OPTIONS]
+```
+
+### Options
+
+- `-d, --dir <directory>`: Directory to serve (default: current directory).
+- `-p, --port <port>`: Port to listen on (default: 8080).
+- `-i, --ignore <patterns>`: Comma-separated patterns to ignore (default: .git,node_modules,DS_Store).
+- `--no-listing`: Disable directory listing.
+- `--no-live-reload`: Disable live reload feature.
+- `--restart-on-change`: Restart server process on file changes (default: browser reload only).
+- `--log <level>`: Log level: info, debug, error (default: info).
+- `-h, --help`: Show help message.
+
+### Examples
+
+#### Start server in current directory
+
+```sh
+httpserve
+```
+
+#### Serve a specific directory on a custom port
+
+```sh
+httpserve --dir ./public --port 3000
+```
+
+#### Disable directory listing
+
+```sh
+httpserve --no-listing
+```
+
+#### Disable live reload
+
+```sh
+httpserve --no-live-reload
+```
+
+#### Restart server on any file change (legacy mode)
+
+```sh
+httpserve --restart-on-change
+```
+
+#### Ignore additional patterns
+
+```sh
+httpserve --ignore "*.log,temp*"
+```
+
+#### Show help message
+
+```sh
+httpserve --help
 ```
 
 ## `plot`
