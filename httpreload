@@ -199,34 +199,34 @@ const getMimeType = (filePath: string): string =>
 const getLiveReloadScript = (port: number): string => {
   return /*html*/ `
 <script>
-(function() {
+(() => {
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
   const wsUrl = \`\${protocol}//\${window.location.hostname}:\${${port}}/livereload\`;
 
-  function connect() {
+  const connect = () => {
     const ws = new WebSocket(wsUrl);
 
-    ws.onopen = function() {
+    ws.onopen = () => {
       console.log('[Live Reload] Connected');
     };
 
-    ws.onmessage = function(event) {
+    ws.onmessage = (event) => {
       if (event.data === 'reload') {
         console.log('[Live Reload] Reloading page...');
         window.location.reload();
       }
     };
 
-    ws.onclose = function() {
+    ws.onclose = () => {
       console.log('[Live Reload] Connection closed, attempting to reconnect...');
       setTimeout(connect, 1000);
     };
 
-    ws.onerror = function() {
+    ws.onerror = () => {
       console.log('[Live Reload] Connection error, attempting to reconnect...');
       setTimeout(connect, 1000);
     };
-  }
+  };
 
   connect();
 })();
