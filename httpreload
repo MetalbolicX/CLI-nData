@@ -296,15 +296,31 @@ const injectLiveReloadScript = (html: string, port: number): string => {
 const getCSSStyles = (): string =>
   /*css*/ `
 :root {
-  color-scheme: light dark;
-  --dark: darklategrey;
-  --light: beige;
-  --fg: light-dark(var(--dark), var(--light));
-  --bg: light-dark(var(--light), var(--dark));
-  --link: light-dark(#06c, #9cf);
-  --link-hover: light-dark(#04a, #06c);
-  color: var(--fg);
-  background: var(--bg);
+  --bg-page: #f2f2f2;
+  --bg-article: #bbc3db;
+  --color-title: #333;
+  --color-paragraph: #333;
+  --link-color: #1a0dab;
+  --link-hover-color: #d93025;
+
+  --toggle-color: #0f172b;
+  --fill-icons: white;
+  --sun-icon: none;
+  --dark-icon: block;
+}
+
+:root:has(#dark:checked) {
+  --bg-page: #333;
+  --bg-article: #444;
+  --color-title: #eee;
+  --color-paragraph: #ddd;
+  --link-color: #bb86fc;
+  --link-hover-color: #ff79c6;
+
+  --toggle-color: #0f172b;
+  --fill-icons: white;
+  --sun-icon: none;
+  --dark-icon: block;
 }
 
 body {
@@ -312,26 +328,27 @@ body {
   font-size: 1.3em;
   margin: 0.5em;
   padding: 1em;
+  background-color: var(--bg-page);
+  color: var(--color-paragraph);
 
   &:has(#dark:checked) {
-    background-color: var(--dark);
-    color: var(--light);
+    background-color: var(--bg-article);
+    color: var(--color-title);
   }
 }
 
 h1 {
   font-size: 2em;
   margin-bottom: 0.5em;
-  border-bottom: 1px solid var(--fg);
 }
 
 a {
-  color: var(--link);
   text-decoration: none;
+  color: var(--link-color);
 
   &:hover {
-    color: var(--link-hover);
     text-decoration: underline;
+    color: var(--link-hover-color);
   }
 }
 `.trim();
@@ -364,7 +381,7 @@ const generateDirectoryListingHTML = (
   // Theme toggle radio buttons and labels (no JS, pure CSS)
   const themeToggle = /*html*/ `
     <label>
-      <input type="checkbox" name="theme" id="dark" checked>
+      <input type="checkbox" name="theme" id="dark"> Dark Mode
     </label>
   `;
 
