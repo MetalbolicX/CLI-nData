@@ -9,6 +9,7 @@ interface Config {
   ignorePatterns: string[];
   enableDirectoryListing: boolean;
   logLevel: "info" | "debug" | "error";
+  enableLiveReload: boolean;
 }
 
 interface FileEntry {
@@ -23,20 +24,23 @@ const DEFAULT_CONFIG: Config = {
   ignorePatterns: [".git", "node_modules", ".DS_Store"],
   enableDirectoryListing: true,
   logLevel: "info",
+  enableLiveReload: true,
 };
 
 let debounceTimeout: number | null = null;
+const liveReloadClients = new Set<WebSocket>();
 
 const parseArguments = (args: string[]): Config => {
   const parsed = parseArgs(args, {
     string: ["dir", "port", "ignore", "log"],
-    boolean: ["no-listing", "help"],
+    boolean: ["no-listing", "help", "no-live-reload"],
     default: {
       dir: DEFAULT_CONFIG.directory,
       port: DEFAULT_CONFIG.port.toString(),
       ignore: DEFAULT_CONFIG.ignorePatterns.join(","),
       log: DEFAULT_CONFIG.logLevel,
       "no-listing": false,
+      "no-live-reload": false,
     },
     alias: {
       d: "dir",
@@ -57,6 +61,7 @@ Options:
   -p, --port <port>         Port to listen on (default: 8080)
   -i, --ignore <patterns>   Comma-separated patterns to ignore (default: .git,node_modules,.DS_Store)
   --no-listing             Disable directory listing
+  --no-live-reload         Disable live reload feature
   --log <level>            Log level: info, debug, error (default: info)
   -h, --help               Show this help message
 
@@ -79,6 +84,7 @@ Examples:
     ignorePatterns: parsed.ignore.split(",").map((pattern) => pattern.trim()),
     enableDirectoryListing: !parsed["no-listing"],
     logLevel: parsed.log as Config["logLevel"],
+    enableLiveReload: !parsed["no-live-reload"],
   };
 };
 
@@ -135,6 +141,54 @@ const getMimeType = (filePath: string): string => {
   );
 };
 
+const getLiveReloadScript = (port: number): string => {
+  return `
+<script>
+(function() {
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const wsUrl = \`\${protocol}//\${window.location.hostname}:\${${port}}/livereload\`;
+
+  function connect() {
+    const ws = new WebSocket(wsUrl);
+
+    ws.onopen = function() {
+      console.log('[Live Reload] Connected');
+    };
+
+    ws.onmessage = function(event) {
+      if (event.data === 'reload') {
+        console.log('[Live Reload] Reloading page...');
+        window.location.reload();
+      }
+    };
+
+    ws.onclose = function() {
+      console.log('[Live Reload] Connection closed, attempting to reconnect...');
+      setTimeout(connect, 1000);
+    };
+
+    ws.onerror = function() {
+      console.log('[Live Reload] Connection error, attempting to reconnect...');
+      setTimeout(connect, 1000);
+    };
+  }
+
+  connect();
+})();
+</script>`;
+};
+
+const injectLiveReloadScript = (html: string, port: number): string => {
+  const script = getLiveReloadScript(port);
+  if (html.includes("</body>")) {
+    return html.replace("</body>", `${script}\n</body>`);
+  } else if (html.includes("</html>")) {
+    return html.replace("</html>", `${script}\n</html>`);
+  } else {
+    return html + script;
+  }
+};
+
 const generateDirectoryListingHTML = (
   entries: FileEntry[],
   urlPath: string
@@ -176,9 +230,59 @@ const generateDirectoryListingHTML = (
   `.trim();
 };
 
-const serveFile = async (filePath: string): Promise<Response> => {
+const handleWebSocket = (request: Request): Response => {
+  const { socket, response } = Deno.upgradeWebSocket(request);
+
+  socket.onopen = () => {
+    liveReloadClients.add(socket);
+    log(`Live reload client connected. Total clients: ${liveReloadClients.size}`, "debug");
+  };
+
+  socket.onclose = () => {
+    liveReloadClients.delete(socket);
+    log(`Live reload client disconnected. Total clients: ${liveReloadClients.size}`, "debug");
+  };
+
+  socket.onerror = () => {
+    liveReloadClients.delete(socket);
+    log(`Live reload client error. Total clients: ${liveReloadClients.size}`, "debug");
+  };
+
+  return response;
+};
+
+const notifyLiveReloadClients = (): void => {
+  for (const client of liveReloadClients) {
+    try {
+      client.send("reload");
+    } catch {
+      liveReloadClients.delete(client);
+    }
+  }
+  log(`Sent reload signal to ${liveReloadClients.size} clients`, "debug");
+};
+
+const serveFile = async (filePath: string, config: Config): Promise<Response> => {
   const file = await Deno.open(filePath, { read: true });
   const mimeType = getMimeType(filePath);
+
+  // If it's an HTML file and live reload is enabled, inject the script
+  if (config.enableLiveReload && mimeType.includes("text/html")) {
+    const content = await file.readable.getReader().read();
+    file.close();
+
+    if (content.value) {
+      const html = new TextDecoder().decode(content.value);
+      const modifiedHtml = injectLiveReloadScript(html, config.port);
+
+      return new Response(modifiedHtml, {
+        headers: {
+          "content-type": mimeType,
+          "cache-control": "no-cache",
+        },
+      });
+    }
+  }
 
   return new Response(file.readable, {
     headers: {
@@ -207,7 +311,12 @@ const serveDirectory = async (
     }
   }
 
-  const html = generateDirectoryListingHTML(entries, urlPath);
+  let html = generateDirectoryListingHTML(entries, urlPath);
+
+  // Inject live reload script if enabled
+  if (config.enableLiveReload) {
+    html = injectLiveReloadScript(html, config.port);
+  }
 
   return new Response(html, {
     headers: { "content-type": "text/html; charset=utf-8" },
@@ -221,6 +330,11 @@ const createRequestHandler = (config: Config) => {
 
     log(`${request.method} ${pathname}`, "debug");
 
+    // Handle WebSocket upgrade for live reload
+    if (config.enableLiveReload && pathname === "/livereload" && request.headers.get("upgrade") === "websocket") {
+      return handleWebSocket(request);
+    }
+
     // Security: Prevent directory traversal
     const safePath = resolveSafePath(config.directory, pathname);
     if (!safePath) {
@@ -232,7 +346,7 @@ const createRequestHandler = (config: Config) => {
       const fileInfo = await Deno.stat(safePath);
 
       if (fileInfo.isFile) {
-        return await serveFile(safePath);
+        return await serveFile(safePath, config);
       } else if (fileInfo.isDirectory) {
         if (config.enableDirectoryListing) {
           return await serveDirectory(safePath, pathname, config);
@@ -241,7 +355,7 @@ const createRequestHandler = (config: Config) => {
           const indexPath = join(safePath, "index.html");
           try {
             await Deno.stat(indexPath);
-            return await serveFile(indexPath);
+            return await serveFile(indexPath, config);
           } catch {
             return new Response("Directory listing disabled", { status: 403 });
           }
@@ -252,7 +366,7 @@ const createRequestHandler = (config: Config) => {
         log(`File not found: ${pathname}`, "error");
         return new Response("Not Found", { status: 404 });
       }
-      log(`Server error: ${error.message}`, "error");
+      log(`Server error: ${(error as Error).message}`, "error");
       return new Response("Internal Server Error", { status: 500 });
     }
 
@@ -279,7 +393,13 @@ const startFileWatcher = async (
     await debounce(500);
 
     if (!abortController.signal.aborted) {
-      await reloadServer();
+      // Notify live reload clients before restarting
+      if (config.enableLiveReload) {
+        notifyLiveReloadClients();
+        // Give clients time to receive the message
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      reloadServer();
     }
   }
 };
@@ -300,7 +420,7 @@ const startHttpServer = async (
   }).finished;
 };
 
-const reloadServer = async (): Promise<void> => {
+const reloadServer = (): void => {
   log("Reloading server...");
 
   // Create new process with same arguments
@@ -362,7 +482,7 @@ const main = async (): Promise<void> => {
       startHttpServer(config, abortController),
     ]);
   } catch (error) {
-    log(`Error: ${error.message}`, "error");
+    log(`Error: ${(error as Error).message}`, "error");
     Deno.exit(1);
   }
 };
