@@ -10,6 +10,7 @@ interface Config {
   enableDirectoryListing: boolean;
   logLevel: "info" | "debug" | "error";
   enableLiveReload: boolean;
+  restartOnChange: boolean;
 }
 
 interface FileEntry {
@@ -25,6 +26,7 @@ const DEFAULT_CONFIG: Config = {
   enableDirectoryListing: true,
   logLevel: "info",
   enableLiveReload: true,
+  restartOnChange: false,
 };
 
 let debounceTimeout: number | null = null;
@@ -33,7 +35,7 @@ const liveReloadClients = new Set<WebSocket>();
 const parseArguments = (args: string[]): Config => {
   const parsed = parseArgs(args, {
     string: ["dir", "port", "ignore", "log"],
-    boolean: ["no-listing", "help", "no-live-reload"],
+    boolean: ["no-listing", "help", "no-live-reload", "restart-on-change"],
     default: {
       dir: DEFAULT_CONFIG.directory,
       port: DEFAULT_CONFIG.port.toString(),
@@ -41,6 +43,7 @@ const parseArguments = (args: string[]): Config => {
       log: DEFAULT_CONFIG.logLevel,
       "no-listing": false,
       "no-live-reload": false,
+      "restart-on-change": false,
     },
     alias: {
       d: "dir",
@@ -62,12 +65,15 @@ Options:
   -i, --ignore <patterns>   Comma-separated patterns to ignore (default: .git,node_modules,.DS_Store)
   --no-listing             Disable directory listing
   --no-live-reload         Disable live reload feature
+  --restart-on-change      Restart server process on file changes (default: browser reload only)
   --log <level>            Log level: info, debug, error (default: info)
   -h, --help               Show this help message
 
 Examples:
-  httpreload
-  httpreload --dir ./public --port 3000
+  httpreload                                    # Smart mode: browser reload for HTML/CSS/JS, server restart for config
+  httpreload --dir ./public --port 3000        # Serve from ./public on port 3000
+  httpreload --restart-on-change                # Legacy mode: always restart server on any file change
+  httpreload --no-live-reload                   # Disable all live reload features
   httpreload --ignore "*.log,temp*" --no-listing
 `);
     Deno.exit(0);
@@ -85,6 +91,7 @@ Examples:
     enableDirectoryListing: !parsed["no-listing"],
     logLevel: parsed.log as Config["logLevel"],
     enableLiveReload: !parsed["no-live-reload"],
+    restartOnChange: parsed["restart-on-change"],
   };
 };
 
@@ -102,6 +109,50 @@ const shouldIgnoreEvent = (
     ignorePatterns.some(
       (pattern) => path.includes(pattern) || path.endsWith(pattern)
     )
+  );
+};
+
+const shouldRestartServer = (filePaths: string[]): boolean => {
+  // Files that should trigger server restart (server configuration, executable changes)
+  const serverRestartPatterns = [
+    /\.ts$/, // TypeScript server files
+    /\.js$/, // JavaScript server files (if server code)
+    /\.mjs$/, // ES modules
+    /\.json$/, // Configuration files
+    /\.toml$/, // Configuration files
+    /\.yaml$/, // Configuration files
+    /\.yml$/, // Configuration files
+    /deno\.json/, // Deno config
+    /deno\.lock/, // Deno lock file
+    /package\.json/, // Node package file
+  ];
+
+  return filePaths.some(path =>
+    serverRestartPatterns.some(pattern => pattern.test(path))
+  );
+};
+
+const shouldTriggerBrowserReload = (filePaths: string[]): boolean => {
+  // Files that should trigger browser reload (frontend assets)
+  const browserReloadPatterns = [
+    /\.html?$/, // HTML files
+    /\.css$/, // CSS files
+    /\.s[ac]ss$/, // Sass/SCSS files
+    /\.less$/, // Less files
+    /\.js$/, // JavaScript files (frontend)
+    /\.jsx$/, // React JSX files
+    /\.ts$/, // TypeScript files (frontend)
+    /\.tsx$/, // React TSX files
+    /\.vue$/, // Vue files
+    /\.svelte$/, // Svelte files
+    /\.md$/, // Markdown files
+    /\.(png|jpe?g|gif|svg|webp|ico)$/, // Images
+    /\.(woff2?|ttf|eot)$/, // Fonts
+    /\.json$/, // JSON data files (could be frontend data)
+  ];
+
+  return filePaths.some(path =>
+    browserReloadPatterns.some(pattern => pattern.test(path))
   );
 };
 
@@ -251,7 +302,7 @@ const handleWebSocket = (request: Request): Response => {
   return response;
 };
 
-const notifyLiveReloadClients = (): void => {
+const notifyLiveReloadClients = (reason = "file change"): void => {
   for (const client of liveReloadClients) {
     try {
       client.send("reload");
@@ -259,7 +310,7 @@ const notifyLiveReloadClients = (): void => {
       liveReloadClients.delete(client);
     }
   }
-  log(`Sent reload signal to ${liveReloadClients.size} clients`, "debug");
+  log(`Sent reload signal to ${liveReloadClients.size} clients (${reason})`, "info");
 };
 
 const serveFile = async (filePath: string, config: Config): Promise<Response> => {
@@ -381,6 +432,11 @@ const startFileWatcher = async (
   const watcher = Deno.watchFs(config.directory);
 
   log(`Watching for file changes in: ${config.directory}`);
+  if (config.restartOnChange) {
+    log("Mode: Server restart on file changes");
+  } else {
+    log("Mode: Browser reload on file changes (server stays alive)");
+  }
 
   for await (const event of watcher) {
     if (abortController.signal.aborted) break;
@@ -392,14 +448,35 @@ const startFileWatcher = async (
     // Debounce rapid changes
     await debounce(500);
 
-    if (!abortController.signal.aborted) {
-      // Notify live reload clients before restarting
+    if (abortController.signal.aborted) continue;
+
+    // Determine action based on configuration and file types
+    if (config.restartOnChange) {
+      // Legacy mode: always restart server
       if (config.enableLiveReload) {
-        notifyLiveReloadClients();
-        // Give clients time to receive the message
+        notifyLiveReloadClients("server restart");
         await new Promise(resolve => setTimeout(resolve, 100));
       }
       reloadServer();
+    } else {
+      // Smart mode: decide based on file types
+      const shouldRestart = shouldRestartServer(event.paths);
+      const shouldReload = shouldTriggerBrowserReload(event.paths);
+
+      if (shouldRestart) {
+        log("Server configuration files changed, restarting server...");
+        if (config.enableLiveReload) {
+          notifyLiveReloadClients("server restart");
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+        reloadServer();
+      } else if (shouldReload && config.enableLiveReload) {
+        log("Frontend files changed, triggering browser reload...");
+        notifyLiveReloadClients("frontend change");
+        // Note: Server stays alive, only browsers reload
+      } else {
+        log("File change detected but no action taken (not a monitored file type)");
+      }
     }
   }
 };
