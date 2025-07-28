@@ -6,7 +6,11 @@
     "@std/assert": "jsr:@std/assert@1",
     "@std/cli": "jsr:@std/cli@^1.0.21",
     "@std/csv": "jsr:@std/csv@^1.0.6",
+    "@std/fs": "jsr:@std/fs@^1.0.19",
+    "@std/http": "jsr:@std/http@^1.0.20",
     "@std/io": "jsr:@std/io@^0.225.2",
+    "@std/media-types": "jsr:@std/media-types@^1.1.0",
+    "@std/path": "jsr:@std/path@^1.1.1",
     "chartex": "npm:chartex@^1.4.1",
     "node-html-parser": "npm:node-html-parser@^7.0.1",
     "xpath-to-css": "npm:xpath-to-css@^1.2.0"

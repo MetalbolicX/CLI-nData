@@ -1,0 +1,350 @@
+#!/usr/bin/env -S deno run --allow-read --allow-net
+import { parseArgs } from "@std/cli";
+import { join, resolve, normalize } from "@std/path";
+import { contentType } from "@std/media-types";
+
+interface Config {
+  directory: string;
+  port: number;
+  ignorePatterns: string[];
+  enableDirectoryListing: boolean;
+  logLevel: "info" | "debug" | "error";
+}
+
+interface FileEntry {
+  name: string;
+  isDirectory: boolean;
+  url: string;
+}
+
+const DEFAULT_CONFIG: Config = {
+  directory: ".",
+  port: 8080,
+  ignorePatterns: [".git", "node_modules", ".DS_Store"],
+  enableDirectoryListing: true,
+  logLevel: "info"
+};
+
+let debounceTimeout: number | null = null;
+
+const parseArguments = (args: string[]): Config => {
+  const parsed = parseArgs(args, {
+    string: ["dir", "port", "ignore", "log"],
+    boolean: ["no-listing", "help"],
+    default: {
+      dir: DEFAULT_CONFIG.directory,
+      port: DEFAULT_CONFIG.port.toString(),
+      ignore: DEFAULT_CONFIG.ignorePatterns.join(","),
+      log: DEFAULT_CONFIG.logLevel,
+      "no-listing": false
+    },
+    alias: {
+      d: "dir",
+      p: "port",
+      i: "ignore",
+      h: "help"
+    }
+  });
+
+  if (parsed.help) {
+    console.log(`
+Static File Server with Auto-Reload
+
+Usage: httpreload [OPTIONS]
+
+Options:
+  -d, --dir <directory>     Directory to serve (default: current directory)
+  -p, --port <port>         Port to listen on (default: 8080)
+  -i, --ignore <patterns>   Comma-separated patterns to ignore (default: .git,node_modules,.DS_Store)
+  --no-listing             Disable directory listing
+  --log <level>            Log level: info, debug, error (default: info)
+  -h, --help               Show this help message
+
+Examples:
+  httpreload
+  httpreload --dir ./public --port 3000
+  httpreload --ignore "*.log,temp*" --no-listing
+`);
+    Deno.exit(0);
+  }
+
+  const port = parseInt(parsed.port);
+  if (isNaN(port) || port < 1 || port > 65535) {
+    throw new Error("Port must be a valid number between 1 and 65535");
+  }
+
+  return {
+    directory: resolve(parsed.dir),
+    port,
+    ignorePatterns: parsed.ignore.split(",").map(pattern => pattern.trim()),
+    enableDirectoryListing: !parsed["no-listing"],
+    logLevel: parsed.log as Config["logLevel"]
+  };
+};
+
+const log = (message: string, level: Config["logLevel"] = "info"): void => {
+  const timestamp = new Date().toISOString();
+  const prefix = level.toUpperCase().padEnd(5);
+  console.log(`[${timestamp}] ${prefix} ${message}`);
+};
+
+const shouldIgnoreEvent = (event: Deno.FsEvent, ignorePatterns: string[]): boolean => {
+  return event.paths.some(path =>
+    ignorePatterns.some(pattern =>
+      path.includes(pattern) || path.endsWith(pattern)
+    )
+  );
+};
+
+const debounce = (ms: number): Promise<void> => {
+  return new Promise(resolve => {
+    if (debounceTimeout) {
+      clearTimeout(debounceTimeout);
+    }
+    debounceTimeout = setTimeout(resolve, ms);
+  });
+};
+
+const resolveSafePath = (baseDir: string, requestPath: string): string | null => {
+  try {
+    const normalizedPath = normalize(requestPath);
+    const fullPath = join(baseDir, normalizedPath);
+    const resolvedPath = resolve(fullPath);
+    const resolvedBase = resolve(baseDir);
+
+    // Ensure the resolved path is within the base directory
+    if (!resolvedPath.startsWith(resolvedBase)) {
+      return null;
+    }
+
+    return resolvedPath;
+  } catch {
+    return null;
+  }
+};
+
+const getMimeType = (filePath: string): string => {
+  return contentType(filePath.split(".").at(-1) || "") || "application/octet-stream";
+};
+
+const generateDirectoryListingHTML = (entries: FileEntry[], urlPath: string): string => {
+  const parentDir = urlPath === "/" ? "" : `<a href="../">../</a><br>`;
+
+  const entryLinks = entries
+    .sort((a, b) => {
+      if (a.isDirectory && !b.isDirectory) return -1;
+      if (!a.isDirectory && b.isDirectory) return 1;
+      return a.name.localeCompare(b.name);
+    })
+    .map(entry => {
+      const icon = entry.isDirectory ? "📁" : "📄";
+      const href = entry.url === "/" ? `/${entry.name}` : `${entry.url}`;
+      return `<a href="${href}">${icon} ${entry.name}</a>`;
+    })
+    .join("<br>");
+
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Directory listing for ${urlPath}</title>
+  <style>
+    body { font-family: monospace; margin: 40px; }
+    a { text-decoration: none; color: #0066cc; }
+    a:hover { text-decoration: underline; }
+    h1 { border-bottom: 1px solid #ccc; }
+  </style>
+</head>
+<body>
+  <h1>Directory listing for ${urlPath}</h1>
+  ${parentDir}
+  ${entryLinks}
+</body>
+</html>
+  `.trim();
+};
+
+const serveFile = async (filePath: string): Promise<Response> => {
+  const file = await Deno.open(filePath, { read: true });
+  const mimeType = getMimeType(filePath);
+
+  return new Response(file.readable, {
+    headers: {
+      "content-type": mimeType,
+      "cache-control": "no-cache"
+    }
+  });
+};
+
+const serveDirectory = async (dirPath: string, urlPath: string, config: Config): Promise<Response> => {
+  const entries: FileEntry[] = [];
+
+  for await (const entry of Deno.readDir(dirPath)) {
+    if (!config.ignorePatterns.some(pattern => entry.name.includes(pattern))) {
+      entries.push({
+        name: entry.name,
+        isDirectory: entry.isDirectory,
+        url: urlPath === "/" ? `/${entry.name}` : `${urlPath}/${entry.name}`
+      });
+    }
+  }
+
+  const html = generateDirectoryListingHTML(entries, urlPath);
+
+  return new Response(html, {
+    headers: { "content-type": "text/html; charset=utf-8" }
+  });
+};
+
+const createRequestHandler = (config: Config) => {
+  return async (request: Request): Promise<Response> => {
+    const url = new URL(request.url);
+    const pathname = decodeURIComponent(url.pathname);
+
+    log(`${request.method} ${pathname}`, "debug");
+
+    // Security: Prevent directory traversal
+    const safePath = resolveSafePath(config.directory, pathname);
+    if (!safePath) {
+      log(`Forbidden access attempt: ${pathname}`, "error");
+      return new Response("Forbidden", { status: 403 });
+    }
+
+    try {
+      const fileInfo = await Deno.stat(safePath);
+
+      if (fileInfo.isFile) {
+        return await serveFile(safePath);
+      } else if (fileInfo.isDirectory) {
+        if (config.enableDirectoryListing) {
+          return await serveDirectory(safePath, pathname, config);
+        } else {
+          // Try to serve index.html
+          const indexPath = join(safePath, "index.html");
+          try {
+            await Deno.stat(indexPath);
+            return await serveFile(indexPath);
+          } catch {
+            return new Response("Directory listing disabled", { status: 403 });
+          }
+        }
+      }
+    } catch (error) {
+      if (error instanceof Deno.errors.NotFound) {
+        log(`File not found: ${pathname}`, "error");
+        return new Response("Not Found", { status: 404 });
+      }
+      log(`Server error: ${error.message}`, "error");
+      return new Response("Internal Server Error", { status: 500 });
+    }
+
+    return new Response("Bad Request", { status: 400 });
+  };
+};
+
+const startFileWatcher = async (config: Config, abortController: AbortController): Promise<void> => {
+  const watcher = Deno.watchFs(config.directory);
+
+  log(`Watching for file changes in: ${config.directory}`);
+
+  for await (const event of watcher) {
+    if (abortController.signal.aborted) break;
+
+    if (shouldIgnoreEvent(event, config.ignorePatterns)) continue;
+
+    log(`File change detected: ${event.kind} - ${event.paths.join(", ")}`);
+
+    // Debounce rapid changes
+    await debounce(500);
+
+    if (!abortController.signal.aborted) {
+      await reloadServer();
+    }
+  }
+};
+
+const startHttpServer = async (config: Config, abortController: AbortController): Promise<void> => {
+  const handler = createRequestHandler(config);
+
+  log(`Starting server on http://localhost:${config.port}`);
+  log(`Serving directory: ${config.directory}`);
+
+  await Deno.serve({
+    port: config.port,
+    signal: abortController.signal,
+    handler
+  }).finished;
+};
+
+const reloadServer = async (): Promise<void> => {
+  log("Reloading server...");
+
+  // Create new process with same arguments
+  const command = new Deno.Command(Deno.execPath(), {
+    args: [
+      "run",
+      "--allow-read",
+      "--allow-net",
+      import.meta.url,
+      ...Deno.args
+    ]
+  });
+
+  // Start new process
+  command.spawn();
+
+  // Exit current process
+  Deno.exit(0);
+};
+
+const setupSignalHandlers = (abortController: AbortController): void => {
+  const signals = ["SIGINT", "SIGTERM"] as const;
+
+  signals.forEach(signal => {
+    Deno.addSignalListener(signal, () => {
+      log(`Received ${signal}, shutting down gracefully...`);
+      abortController.abort();
+      Deno.exit(0);
+    });
+  });
+};
+
+const main = async (): Promise<void> => {
+  try {
+    const config = parseArguments(Deno.args);
+
+    // Validate directory exists
+    try {
+      const dirInfo = await Deno.stat(config.directory);
+      if (!dirInfo.isDirectory) {
+        throw new Error(`${config.directory} is not a directory`);
+      }
+    } catch (error) {
+      if (error instanceof Deno.errors.NotFound) {
+        throw new Error(`Directory not found: ${config.directory}`);
+      }
+      throw error;
+    }
+
+    const abortController = new AbortController();
+
+    // Setup graceful shutdown
+    setupSignalHandlers(abortController);
+
+    // Start file watcher and HTTP server concurrently
+    await Promise.race([
+      startFileWatcher(config, abortController),
+      startHttpServer(config, abortController)
+    ]);
+
+  } catch (error) {
+    log(`Error: ${error.message}`, "error");
+    Deno.exit(1);
+  }
+};
+
+// Run the server
+if (import.meta.main) {
+  await main();
+}
