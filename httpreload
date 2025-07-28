@@ -128,8 +128,8 @@ const shouldRestartServer = (filePaths: string[]): boolean => {
     /package\.json/, // Node package file
   ];
 
-  return filePaths.some(path =>
-    serverRestartPatterns.some(pattern => pattern.test(path))
+  return filePaths.some((path) =>
+    serverRestartPatterns.some((pattern) => pattern.test(path))
   );
 };
 
@@ -152,8 +152,8 @@ const shouldTriggerBrowserReload = (filePaths: string[]): boolean => {
     /\.json$/, // JSON data files (could be frontend data)
   ];
 
-  return filePaths.some(path =>
-    browserReloadPatterns.some(pattern => pattern.test(path))
+  return filePaths.some((path) =>
+    browserReloadPatterns.some((pattern) => pattern.test(path))
   );
 };
 
@@ -294,17 +294,26 @@ const handleWebSocket = (request: Request): Response => {
 
   socket.onopen = () => {
     liveReloadClients.add(socket);
-    log(`Live reload client connected. Total clients: ${liveReloadClients.size}`, "debug");
+    log(
+      `Live reload client connected. Total clients: ${liveReloadClients.size}`,
+      "debug"
+    );
   };
 
   socket.onclose = () => {
     liveReloadClients.delete(socket);
-    log(`Live reload client disconnected. Total clients: ${liveReloadClients.size}`, "debug");
+    log(
+      `Live reload client disconnected. Total clients: ${liveReloadClients.size}`,
+      "debug"
+    );
   };
 
   socket.onerror = () => {
     liveReloadClients.delete(socket);
-    log(`Live reload client error. Total clients: ${liveReloadClients.size}`, "debug");
+    log(
+      `Live reload client error. Total clients: ${liveReloadClients.size}`,
+      "debug"
+    );
   };
 
   return response;
@@ -336,7 +345,7 @@ const notifyLiveReloadClients = (reason = "file change"): void => {
   }
 
   // Remove stale clients
-  clientsToRemove.forEach(client => liveReloadClients.delete(client));
+  clientsToRemove.forEach((client) => liveReloadClients.delete(client));
 
   log(`Sent reload signal to ${successCount} clients (${reason})`, "info");
   if (clientsToRemove.length > 0) {
@@ -344,7 +353,10 @@ const notifyLiveReloadClients = (reason = "file change"): void => {
   }
 };
 
-const serveFile = async (filePath: string, config: Config): Promise<Response> => {
+const serveFile = async (
+  filePath: string,
+  config: Config
+): Promise<Response> => {
   const file = await Deno.open(filePath, { read: true });
   const mimeType = getMimeType(filePath);
 
@@ -413,7 +425,11 @@ const createRequestHandler = (config: Config) => {
     log(`${request.method} ${pathname}`, "debug");
 
     // Handle WebSocket upgrade for live reload
-    if (config.enableLiveReload && pathname === "/livereload" && request.headers.get("upgrade") === "websocket") {
+    if (
+      config.enableLiveReload &&
+      pathname === "/livereload" &&
+      request.headers.get("upgrade") === "websocket"
+    ) {
       return handleWebSocket(request);
     }
 
@@ -476,7 +492,12 @@ const startFileWatcher = async (
 
     // Skip if we're already processing a change
     if (isProcessingChange) {
-      log(`Skipping duplicate file change event: ${event.kind} - ${event.paths.join(", ")}`, "debug");
+      log(
+        `Skipping duplicate file change event: ${
+          event.kind
+        } - ${event.paths.join(", ")}`,
+        "debug"
+      );
       continue;
     }
 
@@ -497,7 +518,7 @@ const startFileWatcher = async (
         log("Legacy mode: Restarting server for any file change");
         if (config.enableLiveReload) {
           notifyLiveReloadClients("server restart");
-          await new Promise(resolve => setTimeout(resolve, 100));
+          await new Promise((resolve) => setTimeout(resolve, 100));
         }
         reloadServer();
       } else {
@@ -505,13 +526,16 @@ const startFileWatcher = async (
         const shouldRestart = shouldRestartServer(event.paths);
         const shouldReload = shouldTriggerBrowserReload(event.paths);
 
-        log(`File analysis: restart=${shouldRestart}, reload=${shouldReload}`, "debug");
+        log(
+          `File analysis: restart=${shouldRestart}, reload=${shouldReload}`,
+          "debug"
+        );
 
         if (shouldRestart) {
           log("Server configuration files changed, restarting server...");
           if (config.enableLiveReload) {
             notifyLiveReloadClients("server restart");
-            await new Promise(resolve => setTimeout(resolve, 100));
+            await new Promise((resolve) => setTimeout(resolve, 100));
           }
           reloadServer();
         } else if (shouldReload && config.enableLiveReload) {
@@ -519,7 +543,9 @@ const startFileWatcher = async (
           notifyLiveReloadClients("frontend change");
           // Note: Server stays alive, only browsers reload
         } else {
-          log("File change detected but no action taken (not a monitored file type)");
+          log(
+            "File change detected but no action taken (not a monitored file type)"
+          );
         }
       }
     } finally {
@@ -552,14 +578,7 @@ const reloadServer = (): void => {
 
   // Create new process with same arguments
   const command = new Deno.Command(Deno.execPath(), {
-    args: [
-      "run",
-      "--allow-read",
-      "--allow-net",
-      "--allow-run",
-      import.meta.url,
-      ...Deno.args,
-    ],
+    args: ["run", "-NR", "--allow-run", import.meta.url, ...Deno.args],
   });
 
   // Start new process
