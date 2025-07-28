@@ -293,6 +293,49 @@ const injectLiveReloadScript = (html: string, port: number): string => {
   }
 };
 
+const getCSSStyles = (): string =>
+  /*css*/ `
+:root {
+  color-scheme: light dark;
+  --dark: darklategrey;
+  --light: beige;
+  --fg: light-dark(var(--dark), var(--light));
+  --bg: light-dark(var(--light), var(--dark));
+  --link: light-dark(#06c, #9cf);
+  --link-hover: light-dark(#04a, #06c);
+  color: var(--fg);
+  background: var(--bg);
+}
+
+body {
+  font-family: monospace;
+  font-size: 1.3em;
+  margin: 0.5em;
+  padding: 1em;
+
+  &:has(#dark:checked) {
+    background-color: var(--dark);
+    color: var(--light);
+  }
+}
+
+h1 {
+  font-size: 2em;
+  margin-bottom: 0.5em;
+  border-bottom: 1px solid var(--fg);
+}
+
+a {
+  color: var(--link);
+  text-decoration: none;
+
+  &:hover {
+    color: var(--link-hover);
+    text-decoration: underline;
+  }
+}
+`.trim();
+
 /**
  * Generates the HTML for a directory listing.
  * @param entries - The list of file entries in the directory
@@ -318,6 +361,13 @@ const generateDirectoryListingHTML = (
     })
     .join("<br>");
 
+  // Theme toggle radio buttons and labels (no JS, pure CSS)
+  const themeToggle = /*html*/ `
+    <label>
+      <input type="checkbox" name="theme" id="dark" checked>
+    </label>
+  `;
+
   return /*html*/ `
 <!DOCTYPE html>
 <html>
@@ -325,13 +375,11 @@ const generateDirectoryListingHTML = (
   <meta charset="utf-8">
   <title>Directory listing for ${urlPath}</title>
   <style>
-    body { font-family: monospace; margin: 3em; font-size: 1.2em; }
-    a { text-decoration: none; color: #06c; }
-    a:hover { text-decoration: underline; }
-    h1 { border-bottom: 1px solid #ccc; }
+${getCSSStyles()}
   </style>
 </head>
 <body>
+  ${themeToggle}
   <h1>Directory listing for ${urlPath}</h1>
   ${parentDir}
   ${entryLinks}
