@@ -322,7 +322,7 @@ const notifyLiveReloadClients = (reason = "file change"): void => {
   }
 
   let successCount = 0;
-  const clientsToRemove: WebSocket[] = [];
+  let clientsToRemove: WebSocket[] = [];
 
   for (const client of liveReloadClients) {
     try {
@@ -331,11 +331,11 @@ const notifyLiveReloadClients = (reason = "file change"): void => {
         successCount++;
       } else {
         // Client is not in OPEN state, mark for removal
-        clientsToRemove.push(client);
+        clientsToRemove = [...clientsToRemove, client];
       }
     } catch (error) {
       // Client connection failed, mark for removal
-      clientsToRemove.push(client);
+      clientsToRemove = [...clientsToRemove, client];
       log(`Failed to send reload signal to client: ${error}`, "debug");
     }
   }
@@ -387,23 +387,19 @@ const serveDirectory = async (
   urlPath: string,
   config: Config
 ): Promise<Response> => {
-  const entries: FileEntry[] = [];
-
-  for await (const entry of Deno.readDir(dirPath)) {
-    if (
-      !config.ignorePatterns.some((pattern) => entry.name.includes(pattern))
-    ) {
-      entries.push({
-        name: entry.name,
-        isDirectory: entry.isDirectory,
-        url: urlPath === "/" ? `/${entry.name}` : `${urlPath}/${entry.name}`,
-      });
-    }
-  }
+  const entries: FileEntry[] = (await Array.fromAsync(Deno.readDir(dirPath)))
+    .filter(
+      (entry) =>
+        !config.ignorePatterns.some((pattern) => entry.name.includes(pattern))
+    )
+    .map((entry) => ({
+      name: entry.name,
+      isDirectory: entry.isDirectory,
+      url: urlPath === "/" ? `/${entry.name}` : `${urlPath}/${entry.name}`,
+    }));
 
   let html = generateDirectoryListingHTML(entries, urlPath);
 
-  // Inject live reload script if enabled
   if (config.enableLiveReload) {
     html = injectLiveReloadScript(html, config.port);
   }
