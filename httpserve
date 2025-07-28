@@ -305,8 +305,6 @@ const getCSSStyles = (): string =>
 
   --toggle-color: #0f172b;
   --fill-icons: white;
-  --sun-icon: none;
-  --dark-icon: block;
 }
 
 :root:has(#dark:checked) {
@@ -319,8 +317,6 @@ const getCSSStyles = (): string =>
 
   --toggle-color: #0f172b;
   --fill-icons: white;
-  --sun-icon: none;
-  --dark-icon: block;
 }
 
 body {
@@ -349,6 +345,49 @@ a {
   &:hover {
     text-decoration: underline;
     color: var(--link-hover-color);
+  }
+}
+
+.toggle {
+  --width: 3em;
+  --height: calc(var(--width) / 2);
+  --border-radius: calc(var(--height) / 2);
+
+  display: inline-block;
+  cursor: pointer;
+
+  .toggle__input {
+    display: none;
+
+    &:checked + .toggle__fill {
+      background: #009578;
+    }
+
+    &:checked + .toggle__fill::after {
+      transform: translateX(var(--height));
+    }
+  }
+
+  .toggle__fill {
+    position: relative;
+    width: var(--width);
+    height: var(--height);
+    border-radius: var(--border-radius);
+    background-color: var(--toggle-color);
+    transition: background-color 0.3s ease-in-out;
+
+    &::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: var(--height);
+      height: var(--height);
+      border-radius: var(--border-radius);
+      background-color: var(--fill-icons);
+      box-shadow: 0 0 0.2em rgba(0, 0, 0, 0.2);
+      transition: transform 0.3s ease-in-out;
+    }
   }
 }
 `.trim();
@@ -380,8 +419,9 @@ const generateDirectoryListingHTML = (
 
   // Theme toggle radio buttons and labels (no JS, pure CSS)
   const themeToggle = /*html*/ `
-    <label>
-      <input type="checkbox" name="theme" id="dark"> Dark Mode
+    <label class="toggle" for="dark">
+      <input type="checkbox" name="toggle" id="dark" class="toggle__input" checked>
+      <span class="toggle__fill"></span>
     </label>
   `;
 
