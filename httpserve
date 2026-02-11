@@ -240,7 +240,7 @@ const getMimeType = (filePath: string): string =>
  * @returns The live reload script as a string
  */
 const getLiveReloadScript = (port: number): string => {
-  return `
+  return /*html*/`
 <script>
 (() => {
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
